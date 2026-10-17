@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sportello</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#fff; --ink:#1c1b19; --muted:#6a6862; --line:#e2dfd7; --accent:#0b5d8c; --warn:#a4470f; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --card:#1e1e1c; --ink:#eceae4; --muted:#a3a19a; --line:#34332f; --accent:#6fb8e6; --warn:#f2a463; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:860px; margin:auto; padding:24px 16px 56px; }
+  h1 { margin:0; font-size:26px; } h1 span { color:var(--accent); }
+  .sub { color:var(--muted); margin:4px 0 20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs button { flex:1; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  input, select, textarea, button { font:inherit; width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  textarea { min-height:120px; resize:vertical; }
+  button { cursor:pointer; width:auto; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; margin-top:14px; }
+  button.on { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
+  ol.steps { padding-left:20px; } ol.steps li { margin-bottom:12px; }
+  sup a { color:var(--accent); text-decoration:none; font-size:12px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .gap { color:var(--warn); }
+  .badge { display:inline-block; padding:1px 8px; border-radius:99px; font-size:12px; border:1px solid currentColor; }
+  .hidden { display:none; }
+  .privacy { font-size:13px; color:var(--muted); border-left:3px solid var(--accent); padding-left:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Spor<span>tello</span></h1>
+  <p class="sub">Italian bureaucracy, explained step by step, with every step linked to an official source.</p>
+
+  <div class="tabs">
+    <button id="t-plan" class="on">Plan a task</button>
+    <button id="t-letter">Explain a letter</button>
+  </div>
+
+  <section id="plan-view">
+    <div class="card">
+      <label for="task">What do you need to do?</label>
+      <select id="task"></select>
+      <div class="grid">
+        <div><label for="city">City</label><input id="city" placeholder="Milano"></div>
+        <div><label for="nat">Citizenship</label><input id="nat" placeholder="EU, or e.g. Brazil"></div>
+      </div>
+      <label for="sit">Anything else? (optional)</label>
+      <input id="sit" placeholder="e.g. student, arrived last month, renting a room">
+      <button class="primary" id="go-plan">Make my plan</button>
+    </div>
+    <div id="plan-out"></div>
+  </section>
+
+  <section id="letter-view" class="hidden">
+    <div class="card">
+      <label for="lfile">Upload the letter (PDF with text)</label>
+      <input id="lfile" type="file" accept=".pdf,.txt">
+      <label for="ltext">…or paste its text</label>
+      <textarea id="ltext" placeholder="Paste the letter here"></textarea>
+      <button class="primary" id="go-letter">Explain it</button>
+      <p class="privacy">Your letter is sent to the model for this answer only and is never stored.</p>
+    </div>
+    <div id="letter-out"></div>
+  </section>
+
+  <p class="muted">Sportello runs an NVIDIA open model on Nebius Token Factory and searches only official Italian sites with Tavily. It is not legal advice: always confirm with the office.</p>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cite = refs => (refs || []).map(n => `<sup><a href="#src-${n}">[${n}]</a></sup>`).join("");
+let lastDeadlines = [];
+
+fetch("/api/tasks").then(r => r.json()).then(t => {
+  $("task").innerHTML = Object.entries(t).map(([k, v]) => `<option value="${k}">${esc(v[0].toUpperCase() + v.slice(1))}</option>`).join("");
+});
+
+function tab(which) {
+  $("plan-view").classList.toggle("hidden", which !== "plan");
+  $("letter-view").classList.toggle("hidden", which !== "letter");
+  $("t-plan").classList.toggle("on", which === "plan");
+  $("t-letter").classList.toggle("on", which === "letter");
+}
+$("t-plan").onclick = () => tab("plan");
+$("t-letter").onclick = () => tab("letter");
+
+async function call(url, opts) {
+  const r = await fetch(url, opts);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || r.statusText);
+  return body;
+}
+
+$("go-plan").onclick = async () => {
+  const out = $("plan-out");
+  out.innerHTML = `<div class="card muted">Searching official sources and writing your plan…</div>`;
+  try {
+    const p = await call("/api/plan", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({task: $("task").value, city: $("city").value || "Milano", nationality: $("nat").value || "EU", situation: $("sit").value})});
+    out.innerHTML = `
+      <div class="card"><b>${esc(p.summary)}</b>
+        <ol class="steps">${p.steps.map(s => `<li><b>${esc(s.title)}</b>${cite(s.sources)}<br>${esc(s.detail)}${s.where ? `<div class="muted">Where: ${esc(s.where)}</div>` : ""}</li>`).join("")}</ol></div>
+      ${p.documents.length ? `<div class="card"><b>Bring these</b><ul>${p.documents.map(d => `<li>${esc(d.name)}${cite(d.sources)}</li>`).join("")}</ul></div>` : ""}
+      ${p.deadlines.length ? `<div class="card"><b>Deadlines</b><ul>${p.deadlines.map(d => `<li>${esc(d.what)}: ${esc(d.rule)}${cite(d.sources)}</li>`).join("")}</ul></div>` : ""}
+      ${p.gaps.length ? `<div class="card gap"><b>Not covered by official sources</b><ul>${p.gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
+      <div class="card"><b>Sources</b><ol>${p.sources.map(s => `<li id="src-${s.n}"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join("")}</ol></div>`;
+  } catch (e) { out.innerHTML = `<div class="card gap">${esc(e.message)}</div>`; }
+};
+
+$("go-letter").onclick = async () => {
+  const out = $("letter-out");
+  const fd = new FormData();
+  if ($("lfile").files[0]) fd.append("file", $("lfile").files[0]);
+  else fd.append("text", $("ltext").value);
+  out.innerHTML = `<div class="card muted">Reading the letter…</div>`;
+  try {
+    const l = await call("/api/letter", {method: "POST", body: fd});
+    lastDeadlines = l.deadlines || [];
+    out.innerHTML = `
+      <div class="card"><span class="badge">${esc(l.urgency || "unknown")} urgency</span>
+        <p><b>${esc(l.sender)}</b> · ${esc(l.kind)}</p><p>${esc(l.summary)}</p>
+        ${(l.actions || []).length ? `<b>What to do</b><ol>${l.actions.map(a => `<li>${esc(a)}</li>`).join("")}</ol>` : ""}
+        ${(l.amounts || []).length ? `<b>Amounts</b><ul>${l.amounts.map(a => `<li>${esc(a.what)}: € ${esc(a.euro)}</li>`).join("")}</ul>` : ""}
+        ${lastDeadlines.length ? `<b>Deadlines</b><ul>${lastDeadlines.map(d => `<li>${esc(d.date)}: ${esc(d.what)}</li>`).join("")}</ul><button id="ics">Add deadlines to my calendar</button>` : ""}
+      </div>
+      ${(l.words_to_know || []).length ? `<div class="card"><b>Words to know</b><ul>${l.words_to_know.map(w => `<li><i>${esc(w.italian)}</i>: ${esc(w.english)}</li>`).join("")}</ul></div>` : ""}`;
+    if ($("ics")) $("ics").onclick = downloadIcs;
+  } catch (e) { out.innerHTML = `<div class="card gap">${esc(e.message)}</div>`; }
+};
+
+async function downloadIcs() {
+  const r = await fetch("/api/calendar.ics", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({events: lastDeadlines})});
+  const url = URL.createObjectURL(await r.blob());
+  Object.assign(document.createElement("a"), {href: url, download: "sportello.ics"}).click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
