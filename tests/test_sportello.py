@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from sportello import clients, core
-from sportello.main import app
+from service_desk import clients, core
+from service_desk.main import app
 
 SOURCES = [
     {"title": "Codice fiscale - Agenzia Entrate", "url": "https://www.agenziaentrate.gov.it/portale/codice-fiscale", "content": "Bring passport. Free of charge."},

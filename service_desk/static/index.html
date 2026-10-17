@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sportello</title>
+<title>Service Desk</title>
 <style>
   :root { --bg:#f6f4ef; --card:#fff; --ink:#1c1b19; --muted:#6a6862; --line:#e2dfd7; --accent:#0b5d8c; --warn:#a4470f; }
   @media (prefers-color-scheme: dark) { :root { --bg:#141413; --card:#1e1e1c; --ink:#eceae4; --muted:#a3a19a; --line:#34332f; --accent:#6fb8e6; --warn:#f2a463; } }
@@ -33,7 +33,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Spor<span>tello</span></h1>
+  <h1>Service <span>Desk</span></h1>
   <p class="sub">Italian bureaucracy, explained step by step, with every step linked to an official source.</p>
 
   <div class="tabs">
@@ -68,7 +68,7 @@
     <div id="letter-out"></div>
   </section>
 
-  <p class="muted">Sportello runs an NVIDIA open model on Nebius Token Factory and searches only official Italian sites with Tavily. It is not legal advice: always confirm with the office.</p>
+  <p class="muted">Service Desk runs an NVIDIA open model on Nebius Token Factory and searches only official Italian sites with Tavily. It is not legal advice: always confirm with the office.</p>
 </div>
 <script>
 const $ = id => document.getElementById(id);
@@ -136,7 +136,7 @@ $("go-letter").onclick = async () => {
 async function downloadIcs() {
   const r = await fetch("/api/calendar.ics", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({events: lastDeadlines})});
   const url = URL.createObjectURL(await r.blob());
-  Object.assign(document.createElement("a"), {href: url, download: "sportello.ics"}).click();
+  Object.assign(document.createElement("a"), {href: url, download: "service-desk.ics"}).click();
   URL.revokeObjectURL(url);
 }
 </script>

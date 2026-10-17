@@ -1,4 +1,4 @@
-"""Sportello's two jobs: a cited step-by-step plan for a bureaucratic task, and a plain explanation of an official letter."""
+"""Service Desk's two jobs: a cited step-by-step plan for a bureaucratic task, and a plain explanation of an official letter."""
 
 from __future__ import annotations
 
@@ -131,13 +131,13 @@ def _date_forms(iso: str) -> list[str]:
 def ics(events: list[dict]) -> str:
     """An iCalendar file with one all-day event per deadline ({'what', 'date'})."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Sportello//EN", "CALSCALE:GREGORIAN"]
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Service Desk//EN", "CALSCALE:GREGORIAN"]
     for e in events:
         day = date.fromisoformat(e["date"]).strftime("%Y%m%d")
         summary = re.sub(r"[\r\n]+", " ", e["what"]).replace(",", "\\,").replace(";", "\\;")
         lines += [
             "BEGIN:VEVENT",
-            f"UID:{uuid.uuid4()}@sportello",
+            f"UID:{uuid.uuid4()}@service-desk",
             f"DTSTAMP:{stamp}",
             f"DTSTART;VALUE=DATE:{day}",
             f"SUMMARY:{summary}",

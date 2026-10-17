@@ -1,4 +1,4 @@
-"""Sportello HTTP API and web UI. Nothing the user uploads is stored."""
+"""Service Desk HTTP API and web UI. Nothing the user uploads is stored."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .clients import ServiceError
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_UPLOAD = 5 * 1024 * 1024
 
-app = FastAPI(title="Sportello")
+app = FastAPI(title="Service Desk")
 
 
 @app.get("/")
@@ -73,4 +73,4 @@ def calendar(req: CalendarRequest):
         body = core.ics(req.events)
     except (KeyError, ValueError) as exc:
         raise HTTPException(400, f"each event needs 'what' and an ISO 'date': {exc}")
-    return Response(body, media_type="text/calendar", headers={"Content-Disposition": "attachment; filename=sportello.ics"})
+    return Response(body, media_type="text/calendar", headers={"Content-Disposition": "attachment; filename=service-desk.ics"})
