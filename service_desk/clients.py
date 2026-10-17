@@ -29,6 +29,9 @@ OFFICIAL_DOMAINS = [
 ]
 
 
+DEFAULT_MODEL = "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5"
+
+
 class ServiceError(RuntimeError):
     pass
 
@@ -73,7 +76,7 @@ def chat_json(system: str, user: str | list, max_tokens: int = 2000) -> dict:
     if not key:
         raise ServiceError("NEBIUS_API_KEY is not set")
     base = os.getenv("NEBIUS_BASE_URL", "https://api.tokenfactory.nebius.com/v1").rstrip("/")
-    model = os.getenv("NEBIUS_MODEL", "nvidia/Llama-3_3-Nemotron-Super-49B-v1_5")
+    model = os.getenv("NEBIUS_MODEL", DEFAULT_MODEL)
     try:
         resp = httpx.post(
             f"{base}/chat/completions",

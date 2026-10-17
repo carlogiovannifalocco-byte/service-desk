@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from service_desk import clients, core
+from service_desk import clients, core, demo
 from service_desk.main import app
 
 SOURCES = [
@@ -87,7 +87,11 @@ def test_letter_keeps_only_dates_in_text(monkeypatch):
         },
     )
     res = core.explain_letter(LETTER)
-    assert res["deadlines"] == [{"what": "Pay", "date": "2026-11-30"}]
+    assert [(d["what"], d["date"]) for d in res["deadlines"]] == [("Pay", "2026-11-30")]
+    # The UI shows where the date is written, so the reader can check it.
+    assert res["deadlines"][0]["match"] == "30/11/2026"
+    assert "entro il 30/11/2026" in res["deadlines"][0]["quote"]
+    assert res["deadlines"][0]["quote"].startswith("…") and "312,50." in res["deadlines"][0]["quote"]
 
 
 def test_italian_month_names_count():
@@ -117,3 +121,110 @@ def test_api_letter_from_pasted_text(monkeypatch):
     monkeypatch.setattr(clients, "chat_json", lambda s, u, max_tokens=2000: {"summary": u[:20], "deadlines": []})
     r = TestClient(app).post("/api/letter", data={"text": LETTER})
     assert r.status_code == 200 and r.json()["summary"] == LETTER[:20]
+
+
+def test_letter_date_must_not_match_inside_another_date(monkeypatch):
+    monkeypatch.setattr(clients, "chat_json", lambda s, u, max_tokens=2000: {
+        "deadlines": [{"what": "Invented", "date": "2026-11-05"}, {"what": "Real", "date": "2026-11-25"}]})
+    res = core.explain_letter("Pagare entro il 25/11/2026 oppure il 15 novembre 2026.")
+    assert [d["what"] for d in res["deadlines"]] == ["Real"]
+
+
+def test_letter_language(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(clients, "chat_json", lambda s, u, max_tokens=2000: seen.update(system=s) or {"deadlines": []})
+    assert core.explain_letter(LETTER, "it")["lang"] == "it"
+    assert "Write in simple, plain Italian" in seen["system"]
+    core.explain_letter(LETTER)
+    assert "Write in plain English" in seen["system"]
+    with pytest.raises(ValueError):
+        core.explain_letter(LETTER, "fr")
+    r = TestClient(app).post("/api/letter", data={"text": LETTER, "lang": "fr"})
+    assert r.status_code == 400
+
+
+def test_plan_free_text_question(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(clients, "search", lambda q: seen.update(query=q) or SOURCES)
+
+    def fake_chat(system, user, max_tokens=2000):
+        seen["user"] = user
+        return {"summary": "s", "steps": [{"title": "t", "detail": "d", "where": "", "cost": "Free",
+                                           "time": "Same day", "sources": [1]}]}
+
+    monkeypatch.setattr(clients, "chat_json", fake_chat)
+    c = TestClient(app)
+    body = {"task": "other", "city": "Torino", "nationality": "EU", "question": "convert my  driving licence"}
+    r = c.post("/api/plan", json=body)
+    assert r.status_code == 200
+    assert r.json()["steps"][0]["cost"] == "Free" and r.json()["steps"][0]["time"] == "Same day"
+    assert seen["query"].startswith("convert my driving licence Torino")
+    assert "Task: convert my driving licence" in seen["user"]
+    assert c.post("/api/plan", json={**body, "question": " "}).status_code == 400
+
+
+def test_config_reports_keys_without_values(monkeypatch):
+    monkeypatch.setenv("NEBIUS_API_KEY", "secret-nebius")
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    c = TestClient(app)
+    r = c.get("/api/config")
+    cfg = r.json()
+    assert cfg["nebius_configured"] is True and cfg["tavily_configured"] is False
+    assert "secret-nebius" not in r.text
+    assert "agenziaentrate.gov.it" in cfg["official_domains"]
+    assert {t["id"] for t in cfg["tasks"]} == set(core.TASKS)
+    assert all(t["title"] and t["italian"] for t in cfg["tasks"])
+    assert c.get("/api/health").json() == {"status": "ok"}
+
+
+def _pdf_with_text(text: str) -> bytes:
+    """A minimal one-page PDF with a text layer."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    objs = [b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+            b"/Resources << /Font << /F1 5 0 R >> >> >>",
+            b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    out, offsets = b"%PDF-1.4\n", []
+    for i, o in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    out += b"".join(b"%010d 00000 n \n" % off for off in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    return out
+
+
+def test_api_letter_from_pdf_upload(monkeypatch):
+    monkeypatch.setattr(clients, "chat_json", lambda s, u, max_tokens=2000: {
+        "summary": "ok", "deadlines": [{"what": "Pay", "date": "2026-11-30"}]})
+    pdf = _pdf_with_text("Pagamento entro il 30/11/2026")
+    r = TestClient(app).post("/api/letter", files={"file": ("lettera.pdf", pdf, "application/pdf")})
+    assert r.status_code == 200, r.text
+    assert r.json()["deadlines"][0]["match"] == "30/11/2026"
+
+
+def test_sample_letter_and_demo_mode(monkeypatch):
+    monkeypatch.setattr(clients, "search", demo.search)
+    monkeypatch.setattr(clients, "chat_json", demo.chat_json)
+    c = TestClient(app)
+    sample = c.get("/api/sample-letter").json()
+    assert sample["fictional"] is True
+    # The canned answers go through the real checks: every deadline is found in the letter.
+    for lang in ("en", "it"):
+        res = c.post("/api/letter", data={"text": sample["text"], "lang": lang}).json()
+        assert [d["date"] for d in res["deadlines"]] == ["2026-11-15", "2026-11-30"]
+        assert [d["match"] for d in res["deadlines"]] == ["15 novembre 2026", "30/11/2026"]
+    plan = c.post("/api/plan", json={"task": "residency", "city": "Milano", "nationality": "Brazil"}).json()
+    assert len(plan["steps"]) == 5 and all(s["sources"] for s in plan["steps"])
+    assert all(clients.is_official(s["url"]) for s in plan["sources"])
+    # No example for this task: the honest "no official source" answer is shown.
+    assert c.post("/api/plan", json={"task": "isee", "city": "Roma", "nationality": "EU"}).json()["gaps"]
+
+
+def test_calendar_rejects_malformed_events():
+    c = TestClient(app)
+    assert c.post("/api/calendar.ics", json={"events": [{"what": 5, "date": "2026-11-30"}]}).status_code == 400
+    assert c.post("/api/calendar.ics", json={"events": [{"what": "x", "date": "30/11/2026"}]}).status_code == 400

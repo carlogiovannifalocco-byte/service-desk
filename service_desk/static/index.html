@@ -3,142 +3,1101 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Italian bureaucracy, explained step by step, with every step linked to an official source.">
 <title>Service Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b5a8a'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
-  :root { --bg:#f6f4ef; --card:#fff; --ink:#1c1b19; --muted:#6a6862; --line:#e2dfd7; --accent:#0b5d8c; --warn:#a4470f; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --card:#1e1e1c; --ink:#eceae4; --muted:#a3a19a; --line:#34332f; --accent:#6fb8e6; --warn:#f2a463; } }
+  :root {
+    --bg:#f6f4ee; --surface:#ffffff; --surface-2:#f1eee6; --ink:#1d1c1a; --ink-2:#45433e; --muted:#6a675f;
+    --line:#e2ded3; --line-2:#d3cec1; --accent:#0b5a8a; --accent-hover:#094a72; --accent-ink:#ffffff; --accent-soft:#e4eef5;
+    --ok:#1d7349; --ok-soft:#e2f1e8; --warn:#93460a; --warn-soft:#fcefdc; --danger:#b42318; --danger-soft:#fde9e6;
+    --mark:#fde68a; --mark-ink:#1d1c1a;
+    --shadow:0 1px 2px rgba(28,27,25,.05), 0 4px 16px rgba(28,27,25,.05);
+    --shadow-lg:0 2px 4px rgba(28,27,25,.05), 0 12px 32px rgba(28,27,25,.08);
+    --radius:14px; --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#121211; --surface:#1b1b19; --surface-2:#242421; --ink:#edebe5; --ink-2:#d2cfc7; --muted:#a29f97;
+      --line:#2f2e2b; --line-2:#3d3c38; --accent:#74b8e6; --accent-hover:#93c9ee; --accent-ink:#0a1822; --accent-soft:#18293a;
+      --ok:#73d19c; --ok-soft:#162a1f; --warn:#f2a660; --warn-soft:#2d2115; --danger:#f48a7e; --danger-soft:#341a17;
+      --mark:#7a5d0e; --mark-ink:#fff7da;
+      --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-lg:0 8px 28px rgba(0,0,0,.35);
+    }
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
-  .wrap { max-width:860px; margin:auto; padding:24px 16px 56px; }
-  h1 { margin:0; font-size:26px; } h1 span { color:var(--accent); }
-  .sub { color:var(--muted); margin:4px 0 20px; }
-  .tabs { display:flex; gap:8px; margin-bottom:16px; }
-  .tabs button { flex:1; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
-  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
-  input, select, textarea, button { font:inherit; width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
-  textarea { min-height:120px; resize:vertical; }
-  button { cursor:pointer; width:auto; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; margin-top:14px; }
-  button.on { border-color:var(--accent); color:var(--accent); font-weight:600; }
-  .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
-  ol.steps { padding-left:20px; } ol.steps li { margin-bottom:12px; }
-  sup a { color:var(--accent); text-decoration:none; font-size:12px; }
-  .muted { color:var(--muted); font-size:13px; }
-  .gap { color:var(--warn); }
-  .badge { display:inline-block; padding:1px 8px; border-radius:99px; font-size:12px; border:1px solid currentColor; }
-  .hidden { display:none; }
-  .privacy { font-size:13px; color:var(--muted); border-left:3px solid var(--accent); padding-left:10px; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif; background:var(--bg); color:var(--ink); }
+  a { color:var(--accent); }
+  h1,h2,h3 { line-height:1.2; margin:0; }
+  p { margin:0; }
+  svg { flex:none; }
+  .ico { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  .skip { position:absolute; left:12px; top:-60px; background:var(--accent); color:var(--accent-ink); padding:8px 14px; border-radius:8px; z-index:10; }
+  .skip:focus { top:12px; }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  [hidden] { display:none !important; }
+
+  /* Header */
+  .top { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); }
+  .top-in { max-width:1120px; margin:auto; padding:10px 16px; display:flex; align-items:center; gap:16px; }
+  .brand { display:flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-weight:700; font-size:18px; letter-spacing:-.01em; white-space:nowrap; }
+  .brand-mark { width:30px; height:30px; border-radius:8px; background:var(--accent); display:grid; place-items:center; color:var(--accent-ink); }
+  .brand-mark .ico { width:18px; height:18px; stroke-width:3; }
+  .nav { display:flex; gap:4px; margin-left:auto; }
+  .nav a { color:var(--ink-2); text-decoration:none; padding:8px 12px; border-radius:9px; font-size:15px; font-weight:500; white-space:nowrap; }
+  .nav a:hover { background:var(--surface-2); color:var(--ink); }
+  .nav a[aria-current="page"] { background:var(--accent-soft); color:var(--accent); }
+
+  .banner { border-bottom:1px solid var(--line); }
+  .banner-in { max-width:1120px; margin:auto; padding:10px 16px; display:flex; gap:10px; align-items:flex-start; font-size:14px; }
+  .banner.demo { background:var(--accent-soft); color:var(--ink); }
+  .banner.setup { background:var(--warn-soft); color:var(--ink); }
+  .banner .ico { margin-top:1px; color:var(--accent); }
+  .banner.setup .ico { color:var(--warn); }
+  .banner code { font-size:13px; background:var(--surface); border:1px solid var(--line); padding:0 5px; border-radius:5px; }
+  .pill { display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:650; letter-spacing:.01em; white-space:nowrap; }
+  .pill.example { background:var(--accent); color:var(--accent-ink); }
+
+  main { max-width:1120px; margin:auto; padding:28px 16px 64px; }
+  .view:focus { outline:none; }
+  .eyebrow { font-size:13px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+  .page-h { font-family:var(--serif); font-size:clamp(28px, 4vw, 38px); font-weight:600; letter-spacing:-.01em; }
+  .lede { color:var(--ink-2); font-size:17px; margin-top:10px; max-width:62ch; }
+
+  /* Cards and controls */
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); }
+  .card + .card { margin-top:16px; }
+  .card-h { display:flex; align-items:center; gap:8px; font-size:16px; font-weight:650; margin-bottom:12px; }
+  .card-h .ico { color:var(--muted); }
+  .card-h .count { margin-left:auto; font-size:13px; font-weight:500; color:var(--muted); }
+  label, .label { display:block; font-size:14px; font-weight:600; color:var(--ink-2); margin:0 0 6px; }
+  .hint { font-size:13px; color:var(--muted); font-weight:400; }
+  input[type=text], input[type=search], input[type=date], textarea { font:inherit; width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line-2); background:var(--surface); color:var(--ink); }
+  input::placeholder, textarea::placeholder { color:var(--muted); opacity:.85; }
+  input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  textarea { min-height:150px; resize:vertical; font-size:15px; }
+  .btn { font:inherit; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:10px; border:1px solid var(--line-2); background:var(--surface); color:var(--ink); cursor:pointer; font-weight:600; font-size:15px; text-decoration:none; white-space:nowrap; }
+  .btn:hover { background:var(--surface-2); }
+  .btn:disabled { opacity:.55; cursor:not-allowed; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .btn.primary:hover { background:var(--accent-hover); }
+  .btn.big { padding:13px 22px; font-size:16px; }
+  .btn.small { padding:6px 11px; font-size:14px; font-weight:550; }
+  .btn.link { border:none; background:none; color:var(--accent); padding:4px 2px; }
+  .btn.link:hover { text-decoration:underline; background:none; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .grid2 { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
+
+  .seg { display:inline-flex; padding:3px; background:var(--surface-2); border:1px solid var(--line); border-radius:11px; gap:2px; }
+  .seg label { margin:0; position:relative; }
+  .seg input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+  .seg span { display:block; padding:6px 14px; border-radius:8px; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; }
+  .seg input:checked + span { background:var(--surface); color:var(--ink); box-shadow:var(--shadow); }
+  .seg input:focus-visible + span { outline:3px solid var(--accent); outline-offset:1px; }
+
+  /* Home */
+  .hero { padding:24px 0 8px; }
+  .hero h1 { font-family:var(--serif); font-size:clamp(34px, 5.4vw, 54px); font-weight:600; letter-spacing:-.02em; max-width:17ch; }
+  .hero h1 em { font-style:normal; color:var(--accent); }
+  .paths { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); margin-top:32px; }
+  .path { display:flex; flex-direction:column; gap:10px; text-decoration:none; color:var(--ink); padding:26px; border-radius:18px; border:1px solid var(--line); background:var(--surface); box-shadow:var(--shadow); transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .path:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:var(--accent); }
+  .path-ico { width:48px; height:48px; border-radius:12px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); }
+  .path-ico .ico { width:26px; height:26px; }
+  .path h2 { font-size:22px; margin-top:6px; }
+  .path p { color:var(--ink-2); }
+  .path ul { margin:2px 0 0; padding:0; list-style:none; color:var(--muted); font-size:14px; }
+  .path li { display:flex; gap:8px; align-items:center; padding:2px 0; }
+  .path li .ico { width:16px; height:16px; color:var(--ok); stroke-width:2.4; }
+  .path .go { margin-top:auto; padding-top:8px; font-weight:650; color:var(--accent); display:flex; align-items:center; gap:6px; }
+  .quick { margin-top:28px; }
+  .quick .label { color:var(--muted); font-weight:600; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:99px; border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2); font:inherit; font-size:14px; font-weight:550; text-decoration:none; cursor:pointer; }
+  .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .trust-strip { margin-top:40px; display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); }
+  .trust-item { display:flex; gap:12px; padding:16px; border-radius:var(--radius); background:var(--surface-2); }
+  .trust-item .ico { color:var(--ok); width:22px; height:22px; margin-top:2px; }
+  .trust-item b { display:block; font-size:15px; }
+  .trust-item span { font-size:14px; color:var(--ink-2); }
+
+  /* Plan form */
+  .form-card { margin-top:24px; padding:24px; }
+  fieldset { border:none; margin:0; padding:0; min-width:0; }
+  legend + * { clear:both; }
+  legend { float:left; width:100%; padding:0; font-size:17px; font-weight:650; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .num { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:14px; font-weight:700; flex:none; }
+  .search-wrap { position:relative; margin-bottom:14px; }
+  .search-wrap .ico { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); }
+  .search-wrap input { padding-left:40px; }
+  .task-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+  .task { position:relative; display:flex; gap:12px; padding:14px; border-radius:12px; border:1px solid var(--line-2); background:var(--surface); cursor:pointer; margin:0; font-weight:400; color:var(--ink); transition:border-color .12s, background .12s; }
+  .task:hover { border-color:var(--accent); }
+  .task input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+  .task:has(input:checked) { border-color:var(--accent); background:var(--accent-soft); box-shadow:inset 0 0 0 1px var(--accent); }
+  .task:has(input:focus-visible) { outline:3px solid var(--accent); outline-offset:2px; }
+  .task-ico { width:38px; height:38px; border-radius:10px; display:grid; place-items:center; background:var(--surface-2); color:var(--accent); flex:none; }
+  .task:has(input:checked) .task-ico { background:var(--accent); color:var(--accent-ink); }
+  .task-t { display:block; font-weight:650; font-size:15px; }
+  .task-it { display:block; font-size:13px; color:var(--accent); font-style:italic; }
+  .task-b { display:block; font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4; }
+  .no-match { padding:14px; border:1px dashed var(--line-2); border-radius:12px; color:var(--ink-2); font-size:14px; }
+  .question { margin-top:14px; }
+  .form-sec { margin-top:28px; padding-top:24px; border-top:1px solid var(--line); }
+  .field-row { display:grid; gap:16px; grid-template-columns:1fr 1fr; }
+  .form-foot { margin-top:24px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .form-foot .hint { max-width:48ch; }
+  .field-err { color:var(--danger); font-size:13px; margin-top:6px; }
+
+  .summary-bar { margin-top:24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; }
+  .summary-bar .ctx { display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:14px; color:var(--ink-2); }
+  .summary-bar .ctx b { color:var(--ink); }
+  .summary-bar .btn { margin-left:auto; }
+  .dot { color:var(--line-2); }
+
+  /* Plan results */
+  .results { margin-top:24px; }
+  .plan-head { padding:24px; }
+  .plan-head .top-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .plan-head h2 { font-family:var(--serif); font-size:clamp(24px, 3vw, 30px); font-weight:600; }
+  .plan-summary { font-size:17px; color:var(--ink-2); margin-top:10px; max-width:75ch; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:14px; font-size:14px; color:var(--muted); }
+  .meta span { display:inline-flex; gap:6px; align-items:center; }
+  .meta .ico { width:16px; height:16px; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .progress { margin-top:18px; display:flex; align-items:center; gap:12px; font-size:14px; color:var(--ink-2); }
+  .bar { flex:1; height:8px; border-radius:99px; background:var(--surface-2); overflow:hidden; max-width:320px; }
+  .bar i { display:block; height:100%; background:var(--ok); border-radius:99px; transition:width .25s ease; }
+  .plan-grid { display:grid; gap:16px; grid-template-columns:minmax(0, 1.65fr) minmax(0, 1fr); margin-top:16px; align-items:start; }
+  .plan-grid aside .card + .card { margin-top:16px; }
+
+  .timeline { list-style:none; margin:0; padding:0; }
+  .step { position:relative; display:flex; gap:16px; padding-bottom:24px; }
+  .step:last-child { padding-bottom:4px; }
+  .step::before { content:""; position:absolute; left:17px; top:40px; bottom:4px; width:2px; background:var(--line); }
+  .step:last-child::before { display:none; }
+  .check { position:relative; width:36px; height:36px; flex:none; margin:0; cursor:pointer; }
+  .check input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; z-index:1; }
+  .check .disc { position:absolute; inset:0; border-radius:50%; display:grid; place-items:center; border:2px solid var(--accent); background:var(--surface); color:var(--accent); font-weight:700; font-size:15px; transition:background .15s, border-color .15s; }
+  .check .ico { display:none; width:18px; height:18px; stroke-width:3; }
+  .check input:checked + .disc { background:var(--ok); border-color:var(--ok); color:var(--accent-ink); }
+  .check input:checked + .disc .n { display:none; }
+  .check input:checked + .disc .ico { display:block; color:#fff; }
+  .check input:focus-visible + .disc { outline:3px solid var(--accent); outline-offset:2px; }
+  .step-body { flex:1; min-width:0; padding-top:5px; }
+  .step-title { font-size:17px; font-weight:650; }
+  .step.done .step-title { color:var(--muted); text-decoration:line-through; text-decoration-thickness:1.5px; }
+  .step-detail { color:var(--ink-2); margin-top:4px; }
+  .facts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .fact { display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:4px 10px; border-radius:8px; background:var(--surface-2); color:var(--ink-2); }
+  .fact .ico { width:15px; height:15px; color:var(--muted); }
+  .srcs { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .src { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:550; padding:4px 10px 4px 8px; border-radius:99px; background:var(--ok-soft); color:var(--ok); text-decoration:none; border:1px solid color-mix(in srgb, var(--ok) 25%, transparent); max-width:100%; }
+  .src:hover { border-color:var(--ok); }
+  .src .ico { width:14px; height:14px; stroke-width:2.4; }
+  .src .dom { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .src .n { opacity:.75; font-variant-numeric:tabular-nums; }
+
+  .checklist { list-style:none; margin:0; padding:0; }
+  .checklist li { border-top:1px solid var(--line); }
+  .checklist li:first-child { border-top:none; }
+  .checklist label { display:flex; gap:10px; align-items:flex-start; padding:9px 0; margin:0; font-weight:450; color:var(--ink); font-size:15px; cursor:pointer; }
+  .checklist input[type=checkbox] { width:18px; height:18px; margin:3px 0 0; accent-color:var(--ok); flex:none; }
+  .checklist input:checked ~ .txt { color:var(--muted); text-decoration:line-through; }
+  .checklist .srcs { margin-top:4px; }
+  .mini-src { font-size:12px; color:var(--ok); text-decoration:none; font-weight:600; }
+  .mini-src:hover { text-decoration:underline; }
+
+  .dl-item { padding:12px 0; border-top:1px solid var(--line); }
+  .card-h + .dl-item { border-top:none; padding-top:0; }
+  .dl-item b { display:block; }
+  .dl-item .rule { color:var(--ink-2); font-size:15px; }
+  .dl-item .set-date { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .dl-item .set-date label { margin:0; font-size:13px; font-weight:500; color:var(--muted); white-space:nowrap; }
+  .dl-item input[type=date] { padding:5px 8px; font-size:14px; width:auto; }
+
+  .gaps { background:var(--warn-soft); border-color:color-mix(in srgb, var(--warn) 30%, transparent); }
+  .gaps .card-h, .gaps .card-h .ico { color:var(--warn); }
+  .gaps ul { margin:0; padding-left:20px; color:var(--ink); font-size:15px; }
+  .gaps li + li { margin-top:6px; }
+
+  .sources { list-style:none; margin:0; padding:0; counter-reset:none; }
+  .sources li { display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--line); }
+  .sources li:first-child { border-top:none; padding-top:0; }
+  .sources .sn { flex:none; width:24px; height:24px; border-radius:7px; background:var(--ok-soft); color:var(--ok); font-size:12px; font-weight:700; display:grid; place-items:center; }
+  .sources a { font-weight:550; text-decoration:none; color:var(--ink); }
+  .sources a:hover { color:var(--accent); text-decoration:underline; }
+  .sources .host { display:block; font-size:13px; color:var(--ok); }
+
+  /* Letter */
+  .letter-grid { display:grid; gap:20px; grid-template-columns:minmax(0, .95fr) minmax(0, 1.25fr); margin-top:24px; align-items:start; }
+  .letter-input { position:sticky; top:76px; }
+  .drop { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; padding:22px 16px; border:2px dashed var(--line-2); border-radius:12px; background:var(--surface-2); cursor:pointer; margin:0; font-weight:400; color:var(--ink-2); transition:border-color .12s, background .12s; }
+  .drop:hover, .drop.over { border-color:var(--accent); background:var(--accent-soft); }
+  .drop .ico { width:28px; height:28px; color:var(--accent); }
+  .drop b { color:var(--ink); }
+  .drop:focus-within { outline:3px solid var(--accent); outline-offset:2px; }
+  .file-chip { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:var(--accent-soft); font-size:14px; margin-top:10px; }
+  .file-chip .name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .or { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px; margin:16px 0 10px; }
+  .or::before, .or::after { content:""; height:1px; background:var(--line); flex:1; }
+  .letter-opts { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; }
+  .letter-opts .label { margin:0; display:flex; align-items:center; gap:10px; }
+  .privacy { display:flex; gap:8px; font-size:13px; color:var(--muted); margin-top:16px; }
+  .privacy .ico { width:16px; height:16px; color:var(--ok); margin-top:2px; }
+
+  .empty { text-align:center; padding:44px 24px; border:1px dashed var(--line-2); border-radius:var(--radius); color:var(--muted); background:transparent; }
+  .empty .big-ico { width:56px; height:56px; border-radius:16px; display:inline-grid; place-items:center; background:var(--surface-2); color:var(--accent); margin-bottom:12px; }
+  .empty .big-ico .ico { width:28px; height:28px; }
+  .empty h3 { color:var(--ink); font-size:17px; margin-bottom:6px; }
+  .empty ul { list-style:none; padding:0; margin:16px auto 0; display:inline-flex; flex-direction:column; gap:6px; text-align:left; font-size:14px; color:var(--ink-2); }
+  .empty li { display:flex; gap:8px; align-items:center; }
+  .empty li .ico { width:16px; height:16px; color:var(--ok); stroke-width:2.4; }
+
+  .lt-head .top-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .urg { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:99px; font-size:13px; font-weight:700; }
+  .urg::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; }
+  .urg.high { background:var(--danger-soft); color:var(--danger); }
+  .urg.medium { background:var(--warn-soft); color:var(--warn); }
+  .urg.low { background:var(--ok-soft); color:var(--ok); }
+  .urg.unknown { background:var(--surface-2); color:var(--muted); }
+  .lt-sender { font-size:14px; color:var(--muted); margin-top:14px; }
+  .lt-kind { font-family:var(--serif); font-size:24px; font-weight:600; margin-top:2px; }
+  .lt-summary { margin-top:12px; font-size:16.5px; color:var(--ink-2); }
+  .amount { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:16px; padding:14px 16px; border-radius:12px; background:var(--surface-2); }
+  .amount .eur { font-size:26px; font-weight:750; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+  .amount .what { color:var(--ink-2); font-size:14px; }
+
+  .deadline { display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+  .deadline:first-of-type { border-top:none; padding-top:0; }
+  .cal { flex:none; width:58px; border-radius:12px; overflow:hidden; text-align:center; border:1px solid var(--line-2); background:var(--surface); align-self:flex-start; }
+  .cal .m { display:block; background:var(--danger); color:#fff; font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; padding:3px 0; }
+  .cal .d { display:block; font-size:24px; font-weight:750; line-height:1.3; padding:2px 0 0; }
+  .cal .y { display:block; font-size:11px; color:var(--muted); padding-bottom:4px; }
+  .deadline .what { font-weight:650; font-size:16px; }
+  .when { font-size:13px; font-weight:650; color:var(--danger); }
+  .when.later { color:var(--warn); }
+  .when.past { color:var(--muted); }
+  .quote { margin-top:8px; font-size:14px; color:var(--ink-2); padding:8px 12px; border-left:3px solid var(--line-2); background:var(--surface-2); border-radius:0 8px 8px 0; }
+  .quote small { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:650; color:var(--ok); margin-bottom:2px; }
+  .quote small .ico { width:13px; height:13px; stroke-width:2.6; }
+  mark { background:var(--mark); color:var(--mark-ink); padding:0 3px; border-radius:4px; font-weight:650; white-space:nowrap; }
+  .todo { margin:0; padding:0; list-style:none; counter-reset:todo; }
+  .todo li { counter-increment:todo; position:relative; padding:10px 0 10px 40px; border-top:1px solid var(--line); }
+  .todo li:first-child { border-top:none; padding-top:2px; }
+  .todo li::before { content:counter(todo); position:absolute; left:0; top:8px; width:26px; height:26px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:13px; display:grid; place-items:center; }
+  .todo li:first-child::before { top:0; }
+  .words { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr); margin:0; }
+  .words dt, .words dd { margin:0; padding:9px 0; border-top:1px solid var(--line); }
+  .words dt { font-style:italic; font-weight:600; padding-right:12px; color:var(--accent); }
+  .words dt:first-of-type, .words dd:first-of-type { border-top:none; padding-top:0; }
+  .words dd { color:var(--ink-2); font-size:15px; }
+  .disclaimer { display:flex; gap:10px; font-size:14px; color:var(--ink-2); padding:14px 16px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); margin-top:16px; }
+  .disclaimer .ico { color:var(--muted); margin-top:1px; }
+
+  /* Trust */
+  .trust-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); margin-top:28px; }
+  .trust-grid > .card + .card { margin-top:0; }
+  .trust-grid code { overflow-wrap:anywhere; font-size:.9em; }
+  .trust-grid .card h3 { font-size:17px; margin:12px 0 6px; }
+  .trust-grid .card p { color:var(--ink-2); font-size:15px; }
+  .t-ico { width:42px; height:42px; border-radius:11px; display:grid; place-items:center; background:var(--ok-soft); color:var(--ok); }
+  .domains { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .domains code { font-size:13px; padding:4px 9px; border-radius:7px; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-2); }
+  .flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; font-size:14px; }
+  .flow span { padding:6px 11px; border-radius:9px; background:var(--surface-2); border:1px solid var(--line); }
+  .flow .arrow { background:none; border:none; padding:0; color:var(--muted); }
+  .flow .drop-x { background:var(--danger-soft); color:var(--danger); border-color:transparent; }
+
+  /* States */
+  .skel { position:relative; overflow:hidden; background:var(--surface-2); border-radius:8px; }
+  .skel::after { content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 70%, transparent), transparent); animation:shimmer 1.3s infinite; }
+  @keyframes shimmer { to { transform:translateX(100%); } }
+  .skel-line { height:14px; margin:10px 0; }
+  .loading-note { display:flex; align-items:center; gap:10px; color:var(--ink-2); font-size:15px; font-weight:550; }
+  .spinner { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--line-2); border-top-color:var(--accent); animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .error { border-color:color-mix(in srgb, var(--danger) 35%, transparent); background:var(--danger-soft); }
+  .error .card-h { color:var(--danger); }
+  .error .card-h .ico { color:var(--danger); }
+  .error p { color:var(--ink); }
+  .error .actions { margin-top:14px; }
+
+  .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px); opacity:0; background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:10px; font-size:14px; font-weight:600; box-shadow:var(--shadow-lg); transition:opacity .2s, transform .2s; pointer-events:none; z-index:20; max-width:calc(100% - 32px); }
+  .toast.show { opacity:1; transform:translate(-50%, 0); }
+
+  footer { border-top:1px solid var(--line); }
+  .foot-in { max-width:1120px; margin:auto; padding:20px 16px 32px; font-size:13px; color:var(--muted); display:flex; gap:8px 24px; flex-wrap:wrap; justify-content:space-between; }
+
+  @media (max-width: 860px) {
+    .plan-grid, .letter-grid { grid-template-columns:1fr; }
+    .letter-input { position:static; }
+  }
+  @media (max-width: 600px) {
+    body { font-size:15.5px; }
+    .top { position:static; }
+    .top-in { gap:8px; padding:8px 12px; flex-wrap:wrap; }
+    .brand { font-size:17px; }
+    .nav { margin-left:0; width:100%; overflow-x:auto; }
+    .nav a { padding:6px 10px; font-size:14px; }
+    main { padding-top:20px; }
+    .card, .form-card, .plan-head { padding:16px; }
+    .field-row { grid-template-columns:1fr; }
+    .task-grid { grid-template-columns:1fr; }
+    .paths { grid-template-columns:1fr; }
+    .path { padding:20px; }
+    .step { gap:12px; }
+    .summary-bar .btn { margin-left:0; }
+    .actions .btn { flex:1 1 auto; }
+    .words { grid-template-columns:1fr; }
+    .words dd { border-top:none; padding-top:0; }
+    .words dt:not(:first-of-type) { padding-top:10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
+  @media print {
+    .top, .banner, footer, .actions, .summary-bar, .form-card, .set-date, .toast, #plan-intro { display:none !important; }
+    body { background:#fff; }
+    .card { box-shadow:none; break-inside:avoid; }
+    .plan-grid { grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Service <span>Desk</span></h1>
-  <p class="sub">Italian bureaucracy, explained step by step, with every step linked to an official source.</p>
+<a class="skip" href="#main">Skip to content</a>
 
-  <div class="tabs">
-    <button id="t-plan" class="on">Plan a task</button>
-    <button id="t-letter">Explain a letter</button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></symbol>
+  <symbol id="i-letter" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+  <symbol id="i-euro" viewBox="0 0 24 24"><path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4.5 10.5h9M4.5 13.5h9"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v6H7z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5M7 9.5l5-5 5 5M5 20h14"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></symbol>
+  <symbol id="t-codice_fiscale" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.4 1.6-2 3-2s2.4.6 3 2M14 10h4.5M14 13.5h3"/></symbol>
+  <symbol id="t-residency" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5v8.5a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="t-health_card" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></symbol>
+  <symbol id="t-permit_renewal" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M9 16.5h6"/></symbol>
+  <symbol id="t-spid" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16.5 6.5l2 2M14 9l2 2"/></symbol>
+  <symbol id="t-identity_card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="6" y="9" width="5" height="6" rx="1"/><path d="M14 10h4M14 14h4"/></symbol>
+  <symbol id="t-isee" viewBox="0 0 24 24"><path d="M4 20h16M7 16.5v-4M12 16.5V8M17 16.5V10.5"/></symbol>
+  <symbol id="t-other" viewBox="0 0 24 24"><path d="M4 5h16v11H9.5L5 20z"/><path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#" aria-label="Service Desk, home"><span class="brand-mark"><svg class="ico"><use href="#i-check"/></svg></span>Service Desk</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#plan" data-nav="plan">Plan a task</a>
+      <a href="#letter" data-nav="letter">Explain a letter</a>
+      <a href="#trust" data-nav="trust">Why trust it</a>
+    </nav>
   </div>
+</header>
+<div id="banner" role="status"></div>
 
-  <section id="plan-view">
-    <div class="card">
-      <label for="task">What do you need to do?</label>
-      <select id="task"></select>
-      <div class="grid">
-        <div><label for="city">City</label><input id="city" placeholder="Milano"></div>
-        <div><label for="nat">Citizenship</label><input id="nat" placeholder="EU, or e.g. Brazil"></div>
+<main id="main">
+  <!-- HOME -->
+  <section class="view" id="view-home" tabindex="-1" aria-labelledby="home-h">
+    <div class="hero">
+      <div class="eyebrow">Italian bureaucracy, made legible</div>
+      <h1 id="home-h">Know the next step. <em>Check the source.</em></h1>
+      <p class="lede">Service Desk turns Italian paperwork into a plan you can follow, and official letters into plain English. Every step links to an official Italian website, and deadlines are only shown when they are written in your letter.</p>
+    </div>
+    <div class="paths">
+      <a class="path" href="#plan">
+        <span class="path-ico"><svg class="ico"><use href="#i-list"/></svg></span>
+        <h2>Plan a task</h2>
+        <p>Codice fiscale, residency, health card, permesso di soggiorno, SPID… Tell us your city and citizenship, get a step-by-step checklist.</p>
+        <ul>
+          <li><svg class="ico"><use href="#i-check"/></svg>Each step cites an official source</li>
+          <li><svg class="ico"><use href="#i-check"/></svg>Documents to bring, fees, deadlines</li>
+          <li><svg class="ico"><use href="#i-check"/></svg>Tick steps off as you go</li>
+        </ul>
+        <span class="go">Start a plan <svg class="ico"><use href="#i-arrow"/></svg></span>
+      </a>
+      <a class="path" href="#letter">
+        <span class="path-ico"><svg class="ico"><use href="#i-letter"/></svg></span>
+        <h2>Explain a letter</h2>
+        <p>Got a letter from the Agenzia delle Entrate, INPS, the comune or the questura? Upload or paste it and find out what it means.</p>
+        <ul>
+          <li><svg class="ico"><use href="#i-check"/></svg>Plain-language summary and urgency</li>
+          <li><svg class="ico"><use href="#i-check"/></svg>Deadlines quoted from the letter itself</li>
+          <li><svg class="ico"><use href="#i-check"/></svg>Add them to your calendar</li>
+        </ul>
+        <span class="go">Explain a letter <svg class="ico"><use href="#i-arrow"/></svg></span>
+      </a>
+    </div>
+    <div class="quick">
+      <div class="label">Popular tasks</div>
+      <div class="chips" id="quick-tasks"></div>
+    </div>
+    <div class="trust-strip">
+      <div class="trust-item"><svg class="ico"><use href="#i-shield"/></svg><div><b>Official sources only</b><span>Search is restricted to gov.it, INPS, Agenzia delle Entrate and comune websites.</span></div></div>
+      <div class="trust-item"><svg class="ico"><use href="#i-scissors"/></svg><div><b>No source, no step</b><span>Steps the model can't back with a source are removed, and you're told what is missing.</span></div></div>
+      <div class="trust-item"><svg class="ico"><use href="#i-lock"/></svg><div><b>Nothing is stored</b><span>Letters are read for one answer and dropped. <a href="#trust">How it works</a></span></div></div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="view" id="view-plan" tabindex="-1" aria-labelledby="plan-h" hidden>
+    <div id="plan-intro">
+      <div class="eyebrow">Plan a task</div>
+      <h1 class="page-h" id="plan-h">What do you need to get done?</h1>
+      <p class="lede">Pick a task, tell us where you live and your citizenship. Service Desk searches official sites and writes a checklist where every step links to its source.</p>
+    </div>
+
+    <div class="card summary-bar" id="plan-summary-bar" hidden>
+      <div class="ctx" id="plan-ctx"></div>
+      <button class="btn small" id="plan-edit" type="button"><svg class="ico"><use href="#i-edit"/></svg>Change</button>
+    </div>
+
+    <form class="card form-card" id="plan-form" novalidate>
+      <fieldset>
+        <legend><span class="num" aria-hidden="true">1</span>Choose a task</legend>
+        <div class="search-wrap">
+          <svg class="ico"><use href="#i-search"/></svg>
+          <label for="task-search" class="sr-only">Search tasks</label>
+          <input type="search" id="task-search" placeholder="Search, e.g. “tax code”, “doctor”, “ISEE”" autocomplete="off">
+        </div>
+        <div class="task-grid" id="task-grid"></div>
+        <div class="no-match" id="no-match" hidden></div>
+        <div class="question" id="question-wrap" hidden>
+          <label for="question">Describe what you need to do <span class="hint">(the same rules apply: only official sources)</span></label>
+          <textarea id="question" maxlength="300" style="min-height:84px" placeholder="e.g. Convert my Brazilian driving licence to an Italian one"></textarea>
+        </div>
+        <div class="field-err" id="task-err" hidden></div>
+      </fieldset>
+
+      <fieldset class="form-sec">
+        <legend><span class="num" aria-hidden="true">2</span>About you</legend>
+        <div class="field-row">
+          <div>
+            <label for="city">City or comune</label>
+            <input type="text" id="city" list="cities" placeholder="e.g. Milano" autocomplete="address-level2" maxlength="60" aria-describedby="city-err">
+            <datalist id="cities"><option>Milano</option><option>Roma</option><option>Torino</option><option>Napoli</option><option>Bologna</option><option>Firenze</option><option>Genova</option><option>Venezia</option><option>Palermo</option><option>Bari</option><option>Padova</option><option>Verona</option></datalist>
+            <div class="field-err" id="city-err" hidden></div>
+          </div>
+          <div>
+            <span class="label" id="cit-label">Citizenship</span>
+            <div class="seg" role="radiogroup" aria-labelledby="cit-label">
+              <label><input type="radio" name="cit" value="eu"><span>EU citizen</span></label>
+              <label><input type="radio" name="cit" value="noneu" checked><span>Non-EU</span></label>
+            </div>
+            <div id="country-wrap" style="margin-top:10px">
+              <label for="country" class="sr-only">Country of citizenship</label>
+              <input type="text" id="country" placeholder="Country, e.g. Brazil" autocomplete="country-name" maxlength="60" aria-describedby="country-err">
+              <div class="field-err" id="country-err" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <label for="situation">Anything else? <span class="hint">(optional)</span></label>
+          <input type="text" id="situation" maxlength="1000" placeholder="e.g. student, arrived last month, renting a room">
+        </div>
+      </fieldset>
+      <div class="form-foot">
+        <button class="btn primary big" type="submit" id="plan-go">Make my plan <svg class="ico"><use href="#i-arrow"/></svg></button>
+        <span class="hint">Takes 10–30 seconds: we search official sites, then the model writes the plan and every step is checked for a source.</span>
       </div>
-      <label for="sit">Anything else? (optional)</label>
-      <input id="sit" placeholder="e.g. student, arrived last month, renting a room">
-      <button class="primary" id="go-plan">Make my plan</button>
-    </div>
-    <div id="plan-out"></div>
+    </form>
+
+    <div class="results" id="plan-out" aria-live="polite"></div>
   </section>
 
-  <section id="letter-view" class="hidden">
-    <div class="card">
-      <label for="lfile">Upload the letter (PDF with text)</label>
-      <input id="lfile" type="file" accept=".pdf,.txt">
-      <label for="ltext">…or paste its text</label>
-      <textarea id="ltext" placeholder="Paste the letter here"></textarea>
-      <button class="primary" id="go-letter">Explain it</button>
-      <p class="privacy">Your letter is sent to the model for this answer only and is never stored.</p>
+  <!-- LETTER -->
+  <section class="view" id="view-letter" tabindex="-1" aria-labelledby="letter-h" hidden>
+    <div class="eyebrow">Explain a letter</div>
+    <h1 class="page-h" id="letter-h">What does this letter want from me?</h1>
+    <p class="lede">Upload or paste an official letter. You get a plain summary, what to do next, amounts, and the deadlines that are actually written in it.</p>
+
+    <div class="letter-grid">
+      <form class="card letter-input" id="letter-form" novalidate>
+        <label class="drop" id="drop" for="lfile">
+          <svg class="ico"><use href="#i-upload"/></svg>
+          <span><b>Upload the letter</b></span>
+          <span class="hint">PDF with selectable text, or .txt · up to 5 MB · drag &amp; drop works too</span>
+          <input type="file" id="lfile" accept=".pdf,.txt,application/pdf,text/plain" class="sr-only">
+        </label>
+        <div class="file-chip" id="file-chip" hidden>
+          <svg class="ico"><use href="#i-doc"/></svg><span class="name" id="file-name"></span>
+          <button type="button" class="btn small" id="file-clear" aria-label="Remove file"><svg class="ico"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="or">or paste the text</div>
+        <label for="ltext" class="sr-only">Letter text</label>
+        <textarea id="ltext" aria-describedby="letter-err" placeholder="Paste the letter here, Italian is fine."></textarea>
+        <div class="row" style="margin-top:6px">
+          <button type="button" class="btn link" id="sample">No letter at hand? Try a fictional sample</button>
+        </div>
+        <div class="letter-opts">
+          <div class="label"><span id="lang-label">Explain in</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lang-label">
+              <label><input type="radio" name="lang" value="en" checked><span>English</span></label>
+              <label><input type="radio" name="lang" value="it"><span>Italiano</span></label>
+            </div>
+          </div>
+          <button class="btn primary" type="submit" id="letter-go">Explain it <svg class="ico"><use href="#i-arrow"/></svg></button>
+        </div>
+        <div class="field-err" id="letter-err" hidden></div>
+        <p class="privacy"><svg class="ico"><use href="#i-lock"/></svg><span>Your letter is sent to the model for this answer only and is never stored.</span></p>
+      </form>
+
+      <div id="letter-out" aria-live="polite">
+        <div class="empty">
+          <span class="big-ico"><svg class="ico"><use href="#i-letter"/></svg></span>
+          <h3>Your explanation will appear here</h3>
+          <p>Works with letters from the Agenzia delle Entrate, INPS, comune, prefettura, questura and more.</p>
+          <ul>
+            <li><svg class="ico"><use href="#i-check"/></svg>Who sent it and how urgent it is</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>What to do next, step by step</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Deadlines, each quoted from the letter</li>
+            <li><svg class="ico"><use href="#i-check"/></svg>Italian words worth knowing</li>
+          </ul>
+        </div>
+      </div>
     </div>
-    <div id="letter-out"></div>
   </section>
 
-  <p class="muted">Service Desk runs an NVIDIA open model on Nebius Token Factory and searches only official Italian sites with Tavily. It is not legal advice: always confirm with the office.</p>
-</div>
+  <!-- TRUST -->
+  <section class="view" id="view-trust" tabindex="-1" aria-labelledby="trust-h" hidden>
+    <div class="eyebrow">Why trust it</div>
+    <h1 class="page-h" id="trust-h">Every step links to an official source</h1>
+    <p class="lede">Language models can sound sure about things that are wrong. Service Desk doesn't ask you to trust the model: the rules below are enforced in code, and every answer shows you where it comes from so you can check it.</p>
+
+    <div class="trust-grid">
+      <div class="card">
+        <span class="t-ico"><svg class="ico"><use href="#i-search"/></svg></span>
+        <h3>Official sites only</h3>
+        <p>Search runs with Tavily restricted to the domains below. Every result is checked again in code, which rejects look-alikes such as <code>agenziaentrate.gov.it.evil.com</code>. If nothing official is found, the model is not called at all.</p>
+      </div>
+      <div class="card">
+        <span class="t-ico"><svg class="ico"><use href="#i-scissors"/></svg></span>
+        <h3>No source, no step</h3>
+        <p>The model must cite a numbered source for every step, document and deadline. Citations to sources that don't exist are dropped, and anything left without one is removed and listed under “Not covered by official sources”.</p>
+      </div>
+      <div class="card">
+        <span class="t-ico"><svg class="ico"><use href="#i-cal"/></svg></span>
+        <h3>Deadlines quoted from your letter</h3>
+        <p>A date from a letter is shown only if it is written in the letter, as <code>30/11/2026</code>, <code>30.11.2026</code> or <code>30 novembre 2026</code>. You see the sentence it came from, highlighted.</p>
+      </div>
+      <div class="card">
+        <span class="t-ico"><svg class="ico"><use href="#i-lock"/></svg></span>
+        <h3>Nothing is stored</h3>
+        <p>Letters are sent to the model for one answer and dropped. Your ticked steps are saved only in this browser.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-h"><svg class="ico"><use href="#i-shield"/></svg>Allowed sources</div>
+      <p class="hint" style="font-size:14px">Any page on these domains or their subdomains, plus any comune website (<code>comune.&lt;name&gt;.it</code>).</p>
+      <div class="domains" id="domains"></div>
+      <div class="flow" aria-label="How a plan is made">
+        <span>Your task</span><span class="arrow">→</span><span>Search official sites</span><span class="arrow">→</span><span id="model-name">NVIDIA Nemotron on Nebius</span><span class="arrow">→</span><span>Citation check</span><span class="arrow">→</span><span>Your plan</span>
+      </div>
+    </div>
+
+    <div class="disclaimer"><svg class="ico"><use href="#i-info"/></svg><span><b>Not legal advice.</b> Rules change and differ between comuni. Service Desk helps you prepare; always confirm with the office, a CAF or a patronato before acting.</span></div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <span>Not legal advice: always confirm with the office.</span>
+    <span>NVIDIA open model on Nebius Token Factory · Search by Tavily, official sites only</span>
+  </div>
+</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
+"use strict";
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const cite = refs => (refs || []).map(n => `<sup><a href="#src-${n}">[${n}]</a></sup>`).join("");
-let lastDeadlines = [];
+const icon = (name, cls = "ico") => `<svg class="${cls}" aria-hidden="true"><use href="#${name}"/></svg>`;
+const host = url => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; } };
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-fetch("/api/tasks").then(r => r.json()).then(t => {
-  $("task").innerHTML = Object.entries(t).map(([k, v]) => `<option value="${k}">${esc(v[0].toUpperCase() + v.slice(1))}</option>`).join("");
-});
+// Per-browser conveniences only (ticked steps, last plan). Storage may be unavailable: never rely on it.
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem("sd:" + key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem("sd:" + key, JSON.stringify(value)); } catch { /* ignore */ } },
+};
 
-function tab(which) {
-  $("plan-view").classList.toggle("hidden", which !== "plan");
-  $("letter-view").classList.toggle("hidden", which !== "letter");
-  $("t-plan").classList.toggle("on", which === "plan");
-  $("t-letter").classList.toggle("on", which === "letter");
+const FALLBACK_TASKS = {
+  codice_fiscale: ["Tax code", "Codice fiscale"], residency: ["Register residency", "Residenza"],
+  health_card: ["Health service & family doctor", "Iscrizione al SSN"], permit_renewal: ["Renew a residence permit", "Permesso di soggiorno"],
+  spid: ["Digital identity", "SPID"], identity_card: ["Electronic ID card", "CIE"], isee: ["ISEE certificate", "ISEE"],
+};
+const state = { config: null, tasks: [], plan: null, planReq: null, letterReq: null };
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 2600);
 }
-$("t-plan").onclick = () => tab("plan");
-$("t-letter").onclick = () => tab("letter");
 
+class ApiError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
 async function call(url, opts) {
-  const r = await fetch(url, opts);
+  let r;
+  try { r = await fetch(url, opts); }
+  catch { throw new ApiError("Couldn't reach the Service Desk server. Check your connection and try again.", 0); }
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.detail || r.statusText);
+  if (!r.ok) {
+    const d = body.detail;
+    throw new ApiError(Array.isArray(d) ? d.map(x => x.msg).join("; ") : (d || r.statusText), r.status);
+  }
   return body;
 }
 
-$("go-plan").onclick = async () => {
-  const out = $("plan-out");
-  out.innerHTML = `<div class="card muted">Searching official sources and writing your plan…</div>`;
-  try {
-    const p = await call("/api/plan", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({task: $("task").value, city: $("city").value || "Milano", nationality: $("nat").value || "EU", situation: $("sit").value})});
-    out.innerHTML = `
-      <div class="card"><b>${esc(p.summary)}</b>
-        <ol class="steps">${p.steps.map(s => `<li><b>${esc(s.title)}</b>${cite(s.sources)}<br>${esc(s.detail)}${s.where ? `<div class="muted">Where: ${esc(s.where)}</div>` : ""}</li>`).join("")}</ol></div>
-      ${p.documents.length ? `<div class="card"><b>Bring these</b><ul>${p.documents.map(d => `<li>${esc(d.name)}${cite(d.sources)}</li>`).join("")}</ul></div>` : ""}
-      ${p.deadlines.length ? `<div class="card"><b>Deadlines</b><ul>${p.deadlines.map(d => `<li>${esc(d.what)}: ${esc(d.rule)}${cite(d.sources)}</li>`).join("")}</ul></div>` : ""}
-      ${p.gaps.length ? `<div class="card gap"><b>Not covered by official sources</b><ul>${p.gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
-      <div class="card"><b>Sources</b><ol>${p.sources.map(s => `<li id="src-${s.n}"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join("")}</ol></div>`;
-  } catch (e) { out.innerHTML = `<div class="card gap">${esc(e.message)}</div>`; }
-};
-
-$("go-letter").onclick = async () => {
-  const out = $("letter-out");
-  const fd = new FormData();
-  if ($("lfile").files[0]) fd.append("file", $("lfile").files[0]);
-  else fd.append("text", $("ltext").value);
-  out.innerHTML = `<div class="card muted">Reading the letter…</div>`;
-  try {
-    const l = await call("/api/letter", {method: "POST", body: fd});
-    lastDeadlines = l.deadlines || [];
-    out.innerHTML = `
-      <div class="card"><span class="badge">${esc(l.urgency || "unknown")} urgency</span>
-        <p><b>${esc(l.sender)}</b> · ${esc(l.kind)}</p><p>${esc(l.summary)}</p>
-        ${(l.actions || []).length ? `<b>What to do</b><ol>${l.actions.map(a => `<li>${esc(a)}</li>`).join("")}</ol>` : ""}
-        ${(l.amounts || []).length ? `<b>Amounts</b><ul>${l.amounts.map(a => `<li>${esc(a.what)}: € ${esc(a.euro)}</li>`).join("")}</ul>` : ""}
-        ${lastDeadlines.length ? `<b>Deadlines</b><ul>${lastDeadlines.map(d => `<li>${esc(d.date)}: ${esc(d.what)}</li>`).join("")}</ul><button id="ics">Add deadlines to my calendar</button>` : ""}
-      </div>
-      ${(l.words_to_know || []).length ? `<div class="card"><b>Words to know</b><ul>${l.words_to_know.map(w => `<li><i>${esc(w.italian)}</i>: ${esc(w.english)}</li>`).join("")}</ul></div>` : ""}`;
-    if ($("ics")) $("ics").onclick = downloadIcs;
-  } catch (e) { out.innerHTML = `<div class="card gap">${esc(e.message)}</div>`; }
-};
-
-async function downloadIcs() {
-  const r = await fetch("/api/calendar.ics", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({events: lastDeadlines})});
-  const url = URL.createObjectURL(await r.blob());
-  Object.assign(document.createElement("a"), {href: url, download: "service-desk.ics"}).click();
-  URL.revokeObjectURL(url);
+function friendlyError(e, what) {
+  const msg = e.message || String(e);
+  if (/NEBIUS_API_KEY/.test(msg)) return ["The language model isn't set up", "This server has no NEBIUS_API_KEY, so it can't write answers yet. Whoever runs it needs to set the key and restart."];
+  if (/TAVILY_API_KEY/.test(msg)) return ["Search isn't set up", "This server has no TAVILY_API_KEY, so it can't search official sources yet. Whoever runs it needs to set the key and restart."];
+  if (/search failed/.test(msg)) return ["Search didn't answer", "The official-source search failed. This is usually temporary, so try again in a moment."];
+  if (/model call failed|did not return JSON|invalid JSON/.test(msg)) return ["The model didn't answer properly", "The language model returned an error or an unreadable answer. Try again; it usually works the second time."];
+  if (e.status === 413) return ["That file is too big", "Letters can be up to 5 MB. Try pasting the text instead."];
+  if (e.status === 400) return [`We couldn't ${what}`, msg.charAt(0).toUpperCase() + msg.slice(1) + "."];
+  return [`We couldn't ${what}`, msg];
 }
+function errorCard(e, what, retryId) {
+  const [title, body] = friendlyError(e, what);
+  return `<div class="card error" role="alert"><div class="card-h">${icon("i-alert")}${esc(title)}</div><p>${esc(body)}</p>
+    <div class="actions"><button class="btn small" type="button" id="${retryId}">Try again</button></div></div>`;
+}
+
+/* ---------- Routing ---------- */
+const VIEWS = ["home", "plan", "letter", "trust"];
+function route(focus = true) {
+  const name = location.hash.replace(/^#\/?/, "");
+  const view = VIEWS.includes(name) ? name : "home";
+  for (const v of VIEWS) $("view-" + v).hidden = v !== view;
+  document.querySelectorAll("[data-nav]").forEach(a => {
+    if (a.dataset.nav === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  document.title = { home: "Service Desk", plan: "Plan a task · Service Desk", letter: "Explain a letter · Service Desk", trust: "Why trust it · Service Desk" }[view];
+  if (focus) { window.scrollTo(0, 0); $("view-" + view).focus({ preventScroll: true }); }
+}
+window.addEventListener("hashchange", () => route(true));
+
+/* ---------- Config ---------- */
+async function loadConfig() {
+  try { state.config = await call("/api/config"); }
+  catch {
+    // Older server or offline: fall back to the plain task list.
+    try {
+      const t = await call("/api/tasks");
+      state.config = { tasks: Object.entries(t).map(([id, d]) => ({ id, description: d, title: (FALLBACK_TASKS[id] || [d])[0], italian: (FALLBACK_TASKS[id] || [])[1] || "", blurb: "" })), official_domains: [] };
+    } catch { state.config = { tasks: Object.entries(FALLBACK_TASKS).map(([id, [title, italian]]) => ({ id, title, italian, blurb: "" })), official_domains: [] }; }
+  }
+  state.tasks = state.config.tasks;
+  renderBanner(); renderTasks(); renderQuick(); renderTrust();
+}
+
+function renderBanner() {
+  const c = state.config, b = $("banner");
+  if (c.demo) {
+    b.className = "banner demo";
+    b.innerHTML = `<div class="banner-in">${icon("i-info")}<div><span class="pill example">Example data</span>&nbsp; This server runs in demo mode: answers are canned examples, not live search or model output. Examples exist for the <b>tax code</b> and <b>residency</b> plans and for the sample letter.</div></div>`;
+  } else if (c.nebius_configured === false || c.tavily_configured === false) {
+    const missing = [!c.nebius_configured && "<code>NEBIUS_API_KEY</code>", !c.tavily_configured && "<code>TAVILY_API_KEY</code>"].filter(Boolean);
+    const what = !c.nebius_configured ? "Plans and letter explanations won't work" : "Plans won't work (letters will)";
+    b.className = "banner setup";
+    b.innerHTML = `<div class="banner-in">${icon("i-alert")}<div><b>Setup needed.</b> ${missing.join(" and ")} ${missing.length > 1 ? "are" : "is"} not set on this server. ${what} until ${missing.length > 1 ? "they are" : "it is"} set and the server is restarted.</div></div>`;
+  } else { b.className = ""; b.innerHTML = ""; }
+}
+const exampleTag = () => state.config && state.config.demo ? `<span class="pill example">Example data</span>` : "";
+
+/* ---------- Home + trust ---------- */
+function renderQuick() {
+  $("quick-tasks").innerHTML = state.tasks.slice(0, 5).map(t =>
+    `<a class="chip" href="#plan" data-task="${esc(t.id)}">${icon("t-" + t.id)}${esc(t.title)}</a>`).join("");
+  $("quick-tasks").querySelectorAll("[data-task]").forEach(a => a.addEventListener("click", () => selectTask(a.dataset.task)));
+}
+function renderTrust() {
+  const d = state.config.official_domains || [];
+  $("domains").innerHTML = d.length ? d.map(x => `<code>${esc(x)}</code>`).join("") : `<span class="hint">The list is configured on the server.</span>`;
+  if (state.config.model) $("model-name").textContent = state.config.model.split("/").pop() + " on Nebius";
+}
+
+/* ---------- Plan form ---------- */
+function renderTasks() {
+  const cards = [...state.tasks, { id: "other", title: "Something else", italian: "Ask your own question", blurb: "Describe the task in your own words. Same rules: official sources only." }];
+  $("task-grid").innerHTML = cards.map(t => `
+    <label class="task" data-search="${esc([t.title, t.italian, t.blurb, t.description].join(" ").toLowerCase())}" data-id="${esc(t.id)}">
+      <input type="radio" name="task" value="${esc(t.id)}">
+      <span class="task-ico">${icon("t-" + t.id)}</span>
+      <span><span class="task-t">${esc(t.title)}</span>${t.italian ? `<span class="task-it">${esc(t.italian)}</span>` : ""}${t.blurb ? `<span class="task-b">${esc(t.blurb)}</span>` : ""}</span>
+    </label>`).join("");
+  $("task-grid").addEventListener("change", onTaskChange);
+  const saved = store.get("form", null);
+  if (saved) {
+    if (saved.task) selectTask(saved.task, false);
+    $("city").value = saved.city || ""; $("country").value = saved.country || ""; $("situation").value = saved.situation || "";
+    $("question").value = saved.question || "";
+    if (saved.cit) document.querySelector(`input[name=cit][value=${saved.cit}]`).checked = true;
+    onCitChange();
+  }
+}
+function selectTask(id, scroll = true) {
+  const r = document.querySelector(`input[name=task][value="${CSS.escape(id)}"]`);
+  if (!r) return;
+  r.checked = true; onTaskChange();
+  showForm();
+  if (scroll) setTimeout(() => $("city").focus({ preventScroll: true }), 50);
+}
+function onTaskChange() {
+  const v = selectedTask();
+  $("question-wrap").hidden = v !== "other";
+  $("task-err").hidden = true;
+  if (v === "other") $("question").focus();
+}
+const selectedTask = () => (document.querySelector("input[name=task]:checked") || {}).value;
+$("task-search").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll(".task").forEach(card => {
+    const hit = !q || card.dataset.id === "other" || q.split(/\s+/).every(w => card.dataset.search.includes(w));
+    card.hidden = !hit; if (hit && card.dataset.id !== "other") shown++;
+  });
+  const nm = $("no-match");
+  nm.hidden = !(q && shown === 0);
+  if (!nm.hidden) {
+    nm.innerHTML = `No ready-made task matches “${esc(e.target.value.trim())}”. <button type="button" class="btn link" id="ask-own">Ask it as your own question</button>`;
+    $("ask-own").onclick = () => { selectTask("other", false); $("question").value = e.target.value.trim(); $("question").focus(); };
+  }
+});
+function onCitChange() {
+  const eu = document.querySelector("input[name=cit]:checked").value === "eu";
+  $("country-wrap").hidden = eu;
+}
+document.querySelectorAll("input[name=cit]").forEach(r => r.addEventListener("change", onCitChange));
+
+function fieldError(id, msg) {
+  const el = $(id); el.textContent = msg; el.hidden = !msg;
+  const input = $(id.replace(/-err$/, ""));
+  if (input && input.matches("input, textarea")) input.setAttribute("aria-invalid", msg ? "true" : "false");
+}
+function readPlanForm() {
+  const task = selectedTask();
+  const eu = document.querySelector("input[name=cit]:checked").value === "eu";
+  const req = { task, city: $("city").value.trim(), nationality: eu ? "EU" : $("country").value.trim(), situation: $("situation").value.trim(), question: task === "other" ? $("question").value.trim() : "" };
+  let ok = true;
+  fieldError("task-err", !task ? "Choose a task, or pick “Something else” and describe it." : (task === "other" && req.question.length < 5 ? "Describe what you need to do in a few words." : ""));
+  fieldError("city-err", req.city.length < 2 ? "Enter your city or comune." : "");
+  fieldError("country-err", !eu && req.nationality.length < 2 ? "Enter your country of citizenship." : "");
+  for (const id of ["task-err", "city-err", "country-err"]) if (!$(id).hidden) { ok = false; }
+  store.set("form", { task, city: req.city, country: $("country").value.trim(), situation: req.situation, question: $("question").value.trim(), cit: eu ? "eu" : "noneu" });
+  if (!ok) { const first = ["task-err", "city-err", "country-err"].find(id => !$(id).hidden); ({ "task-err": () => (document.querySelector("input[name=task]") || $("task-search")).focus(), "city-err": () => $("city").focus(), "country-err": () => $("country").focus() })[first](); }
+  return ok ? req : null;
+}
+function taskLabel(req) {
+  if (req.task === "other") return req.question;
+  const t = state.tasks.find(x => x.id === req.task);
+  return t ? t.title : req.task;
+}
+function showForm() { $("plan-form").hidden = false; $("plan-summary-bar").hidden = true; $("plan-intro").hidden = false; }
+function collapseForm(req) {
+  $("plan-form").hidden = true; $("plan-intro").hidden = true; $("plan-summary-bar").hidden = false;
+  $("plan-ctx").innerHTML = `<b>${esc(taskLabel(req))}</b><span class="dot">•</span>${icon("i-pin")}${esc(req.city)}<span class="dot">•</span>${req.nationality === "EU" ? "EU citizen" : esc(req.nationality) + " citizen"}${req.situation ? `<span class="dot">•</span>${esc(req.situation)}` : ""}`;
+}
+$("plan-edit").onclick = () => { showForm(); $("plan-form").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }); $("city").focus({ preventScroll: true }); };
+
+$("plan-form").addEventListener("submit", e => { e.preventDefault(); const req = readPlanForm(); if (req) runPlan(req); });
+
+function planSkeleton() {
+  const line = (w) => `<div class="skel skel-line" style="width:${w}%"></div>`;
+  return `<div class="card plan-head" aria-busy="true"><div class="loading-note"><span class="spinner" aria-hidden="true"></span>Searching official sources and writing your plan…</div>
+      <div class="skel" style="height:28px;width:55%;margin-top:18px"></div>${line(92)}${line(70)}</div>
+    <div class="plan-grid"><div class="card">${[0,1,2].map(() => `<div style="display:flex;gap:16px;margin-bottom:22px"><div class="skel" style="width:36px;height:36px;border-radius:50%;flex:none"></div><div style="flex:1">${`<div class="skel" style="height:18px;width:45%"></div>`}${line(95)}${line(60)}<div class="skel" style="height:24px;width:150px;border-radius:99px"></div></div></div>`).join("")}</div>
+    <aside><div class="card">${line(40)}${line(85)}${line(75)}${line(80)}</div><div class="card">${line(35)}${line(90)}</div></aside></div>`;
+}
+
+async function runPlan(req) {
+  state.planReq = req;
+  collapseForm(req);
+  const out = $("plan-out");
+  out.innerHTML = planSkeleton();
+  try {
+    const p = await call("/api/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+    state.plan = p;
+    store.set("lastPlan", { req, plan: p });
+    renderPlan(p, req);
+    out.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  } catch (e) {
+    out.innerHTML = errorCard(e, "make your plan", "plan-retry");
+    $("plan-retry").onclick = () => runPlan(req);
+  }
+}
+
+const planKey = req => "ticks:" + [req.task, req.city.toLowerCase(), req.nationality.toLowerCase(), req.question.toLowerCase()].join("|");
+
+function renderPlan(p, req) {
+  const out = $("plan-out");
+  const srcBy = Object.fromEntries((p.sources || []).map(s => [s.n, s]));
+  const badges = refs => `<div class="srcs">${(refs || []).filter(n => srcBy[n]).map(n =>
+    `<a class="src" href="${esc(srcBy[n].url)}" target="_blank" rel="noopener" title="${esc(srcBy[n].title)}">${icon("i-check")}<span class="dom">${esc(host(srcBy[n].url))}</span><span class="n">[${n}]</span><span class="sr-only">(opens in a new tab)</span></a>`).join("")}</div>`;
+  const ticks = store.get(planKey(req), {});
+  const steps = p.steps || [], docs = p.documents || [], dls = p.deadlines || [], gaps = p.gaps || [];
+
+  if (!steps.length) {
+    out.innerHTML = `<div class="card plan-head"><div class="top-row">${exampleTag()}</div><h2>No plan yet for ${esc(taskLabel(req))} in ${esc(req.city)}</h2>
+      <p class="plan-summary">Service Desk only writes steps it can back with an official source, and it couldn't find enough this time.</p></div>
+      ${gaps.length ? `<div class="card gaps"><div class="card-h">${icon("i-alert")}Not covered by official sources</div><ul>${gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
+      <div class="card"><div class="card-h">${icon("i-info")}What you can do</div><ul style="margin:0;padding-left:20px;color:var(--ink-2)"><li>Try a nearby larger city, or rephrase the task as your own question.</li><li>Check your comune's website directly: it is usually <code>comune.&lt;name&gt;.it</code>.</li></ul></div>`;
+    return;
+  }
+
+  out.innerHTML = `
+    <div class="card plan-head">
+      <div class="top-row"><span class="pill" style="background:var(--ok-soft);color:var(--ok)">${icon("i-shield", "ico")}All steps cited</span>${exampleTag()}</div>
+      <h2>${esc(taskLabel(req))} in ${esc(req.city)}</h2>
+      ${p.summary ? `<p class="plan-summary">${esc(p.summary)}</p>` : ""}
+      <div class="meta">
+        <span>${icon("i-list")}${steps.length} step${steps.length > 1 ? "s" : ""}</span>
+        <span>${icon("i-shield")}${(p.sources || []).length} official source${(p.sources || []).length === 1 ? "" : "s"}</span>
+        ${docs.length ? `<span>${icon("i-doc")}${docs.length} document${docs.length > 1 ? "s" : ""} to bring</span>` : ""}
+        ${gaps.length ? `<span style="color:var(--warn)">${icon("i-alert")}${gaps.length} gap${gaps.length > 1 ? "s" : ""}</span>` : ""}
+      </div>
+      <div class="progress"><span id="prog-text"></span><div class="bar" aria-hidden="true"><i id="prog-bar"></i></div></div>
+      <div class="actions">
+        <button class="btn small" type="button" id="copy-plan">${icon("i-copy")}Copy plan</button>
+        ${dls.length ? `<button class="btn small" type="button" id="ics-plan">${icon("i-cal")}Download .ics</button>` : ""}
+        <button class="btn small" type="button" onclick="window.print()">${icon("i-print")}Print</button>
+      </div>
+    </div>
+    <div class="plan-grid">
+      <div class="card">
+        <div class="card-h">${icon("i-list")}Your steps<span class="count">Tick them off as you go</span></div>
+        <ol class="timeline">${steps.map((s, i) => `
+          <li class="step${ticks["s" + i] ? " done" : ""}" id="step-${i}">
+            <label class="check"><input type="checkbox" data-tick="s${i}" ${ticks["s" + i] ? "checked" : ""} aria-label="Step ${i + 1} done: ${esc(s.title)}"><span class="disc"><span class="n">${i + 1}</span>${icon("i-check")}</span></label>
+            <div class="step-body">
+              <h3 class="step-title">${esc(s.title)}</h3>
+              ${s.detail ? `<p class="step-detail">${esc(s.detail)}</p>` : ""}
+              ${(s.where || s.cost || s.time) ? `<div class="facts">
+                ${s.where ? `<span class="fact">${icon("i-pin")}${esc(s.where)}</span>` : ""}
+                ${s.cost ? `<span class="fact">${icon("i-euro")}${esc(s.cost)}</span>` : ""}
+                ${s.time ? `<span class="fact">${icon("i-clock")}${esc(s.time)}</span>` : ""}</div>` : ""}
+              ${badges(s.sources)}
+            </div>
+          </li>`).join("")}
+        </ol>
+      </div>
+      <aside>
+        ${docs.length ? `<div class="card"><div class="card-h">${icon("i-doc")}Bring these<span class="count" id="doc-count"></span></div>
+          <ul class="checklist">${docs.map((d, i) => `<li><label><input type="checkbox" data-tick="d${i}" ${ticks["d" + i] ? "checked" : ""}><span class="txt">${esc(d.name)} ${(d.sources || []).filter(n => srcBy[n]).map(n => `<a class="mini-src" href="${esc(srcBy[n].url)}" target="_blank" rel="noopener" title="${esc(srcBy[n].title)} (${esc(host(srcBy[n].url))})">[${n}]</a>`).join(" ")}</span></label></li>`).join("")}</ul></div>` : ""}
+        ${dls.length ? `<div class="card"><div class="card-h">${icon("i-cal")}Deadlines</div>
+          ${dls.map((d, i) => `<div class="dl-item"><b>${esc(d.what)}</b><div class="rule">${esc(d.rule)}</div>${badges(d.sources)}
+            <div class="set-date"><label for="dl-${i}">Remind me on</label><input type="date" id="dl-${i}" data-dl="${i}" value="${esc((store.get(planKey(req) + ":dates", {}))[i] || "")}"></div></div>`).join("")}
+          <p class="hint" style="margin-top:10px">These are rules, not dates. Pick the day that applies to you and download a calendar reminder.</p></div>` : ""}
+        ${gaps.length ? `<div class="card gaps"><div class="card-h">${icon("i-alert")}Not covered by official sources</div><ul>${gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
+        <div class="card"><div class="card-h">${icon("i-shield")}Sources</div>
+          <ol class="sources">${(p.sources || []).map(s => `<li id="src-${s.n}"><span class="sn">${s.n}</span><span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || host(s.url))} ${icon("i-link", "ico")}</a><span class="host">${esc(host(s.url))}</span></span></li>`).join("")}</ol></div>
+      </aside>
+    </div>`;
+  out.querySelectorAll(".sources .ico").forEach(i => { i.style.width = "13px"; i.style.height = "13px"; i.style.verticalAlign = "-1px"; });
+
+  const update = () => {
+    const done = steps.filter((_, i) => ticks["s" + i]).length;
+    $("prog-text").textContent = `${done} of ${steps.length} steps done`;
+    $("prog-bar").style.width = (100 * done / steps.length) + "%";
+    if ($("doc-count")) $("doc-count").textContent = `${docs.filter((_, i) => ticks["d" + i]).length} of ${docs.length} ready`;
+  };
+  out.querySelectorAll("[data-tick]").forEach(cb => cb.addEventListener("change", () => {
+    ticks[cb.dataset.tick] = cb.checked;
+    if (cb.dataset.tick[0] === "s") cb.closest(".step").classList.toggle("done", cb.checked);
+    store.set(planKey(req), ticks); update();
+  }));
+  out.querySelectorAll("[data-dl]").forEach(inp => inp.addEventListener("change", () => {
+    const dates = store.get(planKey(req) + ":dates", {}); dates[inp.dataset.dl] = inp.value; store.set(planKey(req) + ":dates", dates);
+  }));
+  update();
+  $("copy-plan").onclick = () => copyText(planText(p, req), "Plan copied to the clipboard");
+  if ($("ics-plan")) $("ics-plan").onclick = () => {
+    const events = dls.map((d, i) => ({ what: `${d.what} (${d.rule})`, date: ($("dl-" + i) || {}).value })).filter(e => e.date);
+    if (!events.length) { toast("Pick a reminder date for at least one deadline first"); $("dl-0").focus(); return; }
+    downloadIcs(events);
+  };
+}
+
+function planText(p, req) {
+  const srcBy = Object.fromEntries((p.sources || []).map(s => [s.n, s]));
+  const refs = r => (r || []).filter(n => srcBy[n]).map(n => `[${n}]`).join("");
+  const lines = [`${taskLabel(req)} in ${req.city} (${req.nationality === "EU" ? "EU citizen" : req.nationality + " citizen"})`, ""];
+  if (p.summary) lines.push(p.summary, "");
+  lines.push("STEPS");
+  (p.steps || []).forEach((s, i) => {
+    lines.push(`${i + 1}. ${s.title} ${refs(s.sources)}`);
+    if (s.detail) lines.push(`   ${s.detail}`);
+    const facts = [s.where && `Where: ${s.where}`, s.cost && `Cost: ${s.cost}`, s.time && `Time: ${s.time}`].filter(Boolean);
+    if (facts.length) lines.push(`   ${facts.join(" · ")}`);
+  });
+  if ((p.documents || []).length) { lines.push("", "BRING THESE"); p.documents.forEach(d => lines.push(`- ${d.name} ${refs(d.sources)}`)); }
+  if ((p.deadlines || []).length) { lines.push("", "DEADLINES"); p.deadlines.forEach(d => lines.push(`- ${d.what}: ${d.rule} ${refs(d.sources)}`)); }
+  if ((p.gaps || []).length) { lines.push("", "NOT COVERED BY OFFICIAL SOURCES"); p.gaps.forEach(g => lines.push(`- ${g}`)); }
+  lines.push("", "SOURCES"); (p.sources || []).forEach(s => lines.push(`[${s.n}] ${s.title} - ${s.url}`));
+  lines.push("", "Made with Service Desk. Not legal advice: always confirm with the office.");
+  return lines.join("\n");
+}
+
+async function copyText(text, done) {
+  try { await navigator.clipboard.writeText(text); toast(done); return; } catch { /* fall back below */ }
+  const ta = Object.assign(document.createElement("textarea"), { value: text });
+  ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); toast(done); } catch { toast("Couldn't copy. Select the text and copy it manually."); }
+  ta.remove();
+}
+
+async function downloadIcs(events) {
+  try {
+    const r = await fetch("/api/calendar.ics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events }) });
+    if (!r.ok) throw new Error();
+    const url = URL.createObjectURL(await r.blob());
+    Object.assign(document.createElement("a"), { href: url, download: "service-desk.ics" }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Calendar file with ${events.length} reminder${events.length > 1 ? "s" : ""} downloaded`);
+  } catch { toast("Couldn't create the calendar file. Try again."); }
+}
+
+/* ---------- Letter ---------- */
+const lfile = $("lfile"), drop = $("drop");
+function setFile(f) {
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); lfile.files = dt.files; }
+  const has = lfile.files.length > 0;
+  $("file-chip").hidden = !has; drop.hidden = has;
+  $("file-name").textContent = has ? `${lfile.files[0].name} · ${Math.max(1, Math.round(lfile.files[0].size / 1024))} KB` : "";
+  $("ltext").disabled = has; $("ltext").placeholder = has ? "Using the uploaded file. Remove it to paste text instead." : "Paste the letter here, Italian is fine.";
+  fieldError("letter-err", "");
+}
+lfile.addEventListener("change", () => setFile());
+$("file-clear").onclick = () => { lfile.value = ""; setFile(); drop.focus(); };
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  if (!/\.(pdf|txt)$/i.test(f.name)) { fieldError("letter-err", "Upload a PDF or a .txt file, or paste the text."); return; }
+  setFile(f);
+});
+$("sample").onclick = async () => {
+  try {
+    const s = await call("/api/sample-letter");
+    lfile.value = ""; setFile();
+    const ta = $("ltext"); ta.value = s.text; ta.focus({ preventScroll: true }); ta.setSelectionRange(0, 0); ta.scrollTop = 0;
+    toast("Sample letter loaded (fictional)");
+  } catch { toast("Couldn't load the sample letter"); }
+};
+const letterLang = () => document.querySelector("input[name=lang]:checked").value;
+document.querySelectorAll("input[name=lang]").forEach(r => r.addEventListener("change", () => {
+  // If an explanation is on screen, redo it in the chosen language.
+  if (state.letterReq && document.querySelector("#letter-out .lt-head")) runLetter({ ...state.letterReq, lang: letterLang() });
+}));
+
+$("letter-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const file = lfile.files[0], text = $("ltext").value.trim();
+  if (!file && text.length < 20) { fieldError("letter-err", text ? "That's very short. Paste the whole letter." : "Upload the letter or paste its text first."); $("ltext").focus(); return; }
+  if (file && file.size > 5 * 1024 * 1024) { fieldError("letter-err", "That file is larger than 5 MB. Paste the text instead."); return; }
+  fieldError("letter-err", "");
+  runLetter({ file, text, lang: letterLang() });
+});
+
+function letterSkeleton() {
+  const line = w => `<div class="skel skel-line" style="width:${w}%"></div>`;
+  return `<div class="card" aria-busy="true"><div class="loading-note"><span class="spinner" aria-hidden="true"></span>Reading the letter…</div>
+    <div class="skel" style="height:14px;width:30%;margin-top:20px"></div><div class="skel" style="height:26px;width:70%;margin-top:8px"></div>${line(96)}${line(90)}${line(62)}</div>
+    <div class="card"><div class="skel" style="height:16px;width:30%"></div>${[0,1].map(() => `<div style="display:flex;gap:14px;margin-top:16px"><div class="skel" style="width:58px;height:64px;border-radius:12px;flex:none"></div><div style="flex:1">${line(55)}${line(90)}</div></div>`).join("")}</div>`;
+}
+
+async function runLetter(req) {
+  state.letterReq = req;
+  const out = $("letter-out");
+  out.innerHTML = letterSkeleton();
+  if (window.innerWidth <= 860) out.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  const fd = new FormData();
+  if (req.file) fd.append("file", req.file); else fd.append("text", req.text);
+  fd.append("lang", req.lang);
+  try {
+    const l = await call("/api/letter", { method: "POST", body: fd });
+    renderLetter(l);
+  } catch (e) {
+    out.innerHTML = errorCard(e, "read this letter", "letter-retry");
+    $("letter-retry").onclick = () => runLetter(req);
+  }
+}
+
+function daysUntil(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const now = new Date(); const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((Date.UTC(y, m - 1, d) - today) / 86400000);
+}
+function whenText(n) {
+  if (n < 0) return [`${-n} day${n === -1 ? "" : "s"} ago`, "past"];
+  if (n === 0) return ["Today", ""]; if (n === 1) return ["Tomorrow", ""];
+  return [`In ${n} days`, n <= 14 ? "" : "later"];
+}
+function highlight(quote, match) {
+  const i = match ? quote.toLowerCase().indexOf(match.toLowerCase()) : -1;
+  if (i < 0) return esc(quote);
+  return esc(quote.slice(0, i)) + `<mark>${esc(quote.slice(i, i + match.length))}</mark>` + esc(quote.slice(i + match.length));
+}
+
+function renderLetter(l) {
+  const out = $("letter-out");
+  const lang = l.lang || "en";
+  const money = new Intl.NumberFormat(lang === "it" ? "it-IT" : "en-IE", { style: "currency", currency: "EUR" });
+  const urg = ["low", "medium", "high"].includes(l.urgency) ? l.urgency : "unknown";
+  const urgLabel = { high: "High urgency", medium: "Medium urgency", low: "Low urgency", unknown: "Urgency unclear" }[urg];
+  const dls = (l.deadlines || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const amounts = (l.amounts || []).filter(a => a && a.euro != null && !isNaN(Number(a.euro)));
+  const actions = l.actions || [], words = l.words_to_know || [];
+  const mon = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
+  out.innerHTML = `
+    <div class="card lt-head">
+      <div class="top-row"><span class="urg ${urg}">${urgLabel}</span>${exampleTag()}${lang === "it" ? `<span class="pill" style="background:var(--surface-2);color:var(--ink-2)">In italiano</span>` : ""}</div>
+      ${l.sender ? `<div class="lt-sender">From ${esc(l.sender)}</div>` : ""}
+      ${l.kind ? `<h2 class="lt-kind">${esc(l.kind)}</h2>` : ""}
+      ${l.summary ? `<p class="lt-summary">${esc(l.summary)}</p>` : ""}
+      ${amounts.map(a => `<div class="amount"><span class="eur">${esc(money.format(Number(a.euro)))}</span><span class="what">${esc(a.what)}</span></div>`).join("")}
+    </div>
+    ${dls.length ? `<div class="card"><div class="card-h">${icon("i-cal")}Deadlines<span class="count">Each one is written in the letter</span></div>
+      ${dls.map(d => { const [y, m, dd] = d.date.split("-"); const [w, cls] = whenText(daysUntil(d.date)); return `
+        <div class="deadline"><div class="cal" aria-hidden="true"><span class="m">${esc(mon.format(new Date(Date.UTC(+y, m - 1, +dd))))}</span><span class="d">${+dd}</span><span class="y">${y}</span></div>
+          <div style="min-width:0"><div class="when ${cls}">${w} · ${esc(new Date(Date.UTC(+y, m - 1, +dd)).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }))}</div>
+          <div class="what">${esc(d.what)}</div>
+          ${d.quote ? `<div class="quote"><small>${icon("i-check")}Found in the letter</small>${highlight(d.quote, d.match)}</div>` : ""}</div></div>`; }).join("")}
+      <div class="actions"><button class="btn small primary" type="button" id="ics-letter">${icon("i-download")}Add ${dls.length > 1 ? `all ${dls.length} deadlines` : "deadline"} to my calendar</button></div></div>`
+      : `<div class="card"><div class="card-h">${icon("i-cal")}Deadlines</div><p class="hint" style="font-size:15px">No exact date was found in the letter. If it says “within 60 days of receipt” or similar, count from the day you received it.</p></div>`}
+    ${actions.length ? `<div class="card"><div class="card-h">${icon("i-list")}What to do next</div><ol class="todo">${actions.map(a => `<li>${esc(a)}</li>`).join("")}</ol></div>` : ""}
+    ${words.length ? `<div class="card"><div class="card-h">${icon("i-book")}Words to know</div><dl class="words">${words.map(w => `<dt lang="it">${esc(w.italian)}</dt><dd>${esc(w.english)}</dd>`).join("")}</dl></div>` : ""}
+    <div class="disclaimer">${icon("i-info")}<span><b>Not legal advice.</b> This explains what the letter says; it can miss things. Before paying or replying, check with the office that sent it, a CAF or a patronato. Deadlines are only listed when the exact date appears in the letter.</span></div>`;
+  if ($("ics-letter")) $("ics-letter").onclick = () => downloadIcs(dls.map(d => ({ what: d.what, date: d.date })));
+}
+
+/* ---------- Start ---------- */
+route(false);
+loadConfig().then(() => {
+  const last = store.get("lastPlan", null);
+  if (last && last.plan && last.req) { state.planReq = last.req; collapseForm(last.req); renderPlan(last.plan, last.req); }
+});
 </script>
 </body>
 </html>

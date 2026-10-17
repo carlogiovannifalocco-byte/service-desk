@@ -21,6 +21,27 @@ TASKS = {
     "isee": "getting an ISEE certificate",
 }
 
+# Display metadata for the UI. Keys match TASKS; "other" is the free-text question.
+TASK_DETAILS = {
+    "codice_fiscale": {"title": "Tax code", "italian": "Codice fiscale",
+                       "blurb": "The ID number you need for a lease, a job, a bank account or a doctor."},
+    "residency": {"title": "Register residency", "italian": "Residenza",
+                  "blurb": "Tell the comune where you live. Unlocks the ID card and the health service."},
+    "health_card": {"title": "Health service & family doctor", "italian": "Iscrizione al SSN",
+                    "blurb": "Join the national health service and pick a medico di base."},
+    "permit_renewal": {"title": "Renew a residence permit", "italian": "Rinnovo permesso di soggiorno",
+                       "blurb": "The postal kit, fees and appointment at the questura."},
+    "spid": {"title": "Digital identity", "italian": "SPID",
+             "blurb": "One login for INPS, Agenzia delle Entrate and most public websites."},
+    "identity_card": {"title": "Electronic ID card", "italian": "Carta d'identità elettronica (CIE)",
+                      "blurb": "The Italian ID card, booked at your comune."},
+    "isee": {"title": "ISEE certificate", "italian": "ISEE",
+             "blurb": "The income indicator used for school fees, bonuses and reduced tariffs."},
+}
+
+OTHER = "other"
+LANGUAGES = {"en": "plain English", "it": "simple, plain Italian"}
+
 PLAN_SYSTEM = """You help people in Italy (often foreigners) with public administration tasks.
 You receive the person's situation and numbered SOURCES from official Italian websites.
 Write a practical plan in plain English. Rules:
@@ -28,8 +49,9 @@ Write a practical plan in plain English. Rules:
 - If the sources do not cover something important, say so in "gaps" instead of guessing.
 - Fees, deadlines and documents must come from the sources; never invent amounts.
 - Note when rules differ by comune or nationality.
+- "cost" and "time" are optional: fill them only if the cited sources state a fee or a duration, otherwise "".
 Reply with JSON:
-{"summary": str, "steps": [{"title": str, "detail": str, "where": str, "sources": [int]}],
+{"summary": str, "steps": [{"title": str, "detail": str, "where": str, "cost": str, "time": str, "sources": [int]}],
  "documents": [{"name": str, "sources": [int]}], "deadlines": [{"what": str, "rule": str, "sources": [int]}],
  "gaps": [str]}"""
 
@@ -48,19 +70,27 @@ def _keep_cited(items: list[dict], n_sources: int) -> list[dict]:
     return kept
 
 
-def plan(task: str, city: str, nationality: str, situation: str = "") -> dict:
-    if task not in TASKS:
-        raise ValueError(f"unknown task, choose one of {sorted(TASKS)}")
+def plan(task: str, city: str, nationality: str, situation: str = "", question: str = "") -> dict:
+    """task is a key of TASKS, or "other" with the person's own question (same grounding rules)."""
+    if task == OTHER:
+        question = " ".join(question.split())
+        if len(question) < 5:
+            raise ValueError("describe what you need to do (at least a few words)")
+        what = question
+    elif task in TASKS:
+        what = TASKS[task]
+    else:
+        raise ValueError(f"unknown task, choose one of {sorted(TASKS) + [OTHER]}")
     is_eu = nationality.strip().lower() in ("eu", "eu citizen")
     eu = "EU citizen" if is_eu else f"citizen of {nationality}"
     who = "EU citizens" if is_eu else "non-EU foreigners"
-    query = f"{TASKS[task]} {city} requirements documents procedure {who}"
+    query = f"{what} {city} requirements documents procedure {who}"
     sources = clients.search(query)
     if not sources:
         return {"summary": "", "steps": [], "documents": [], "deadlines": [], "sources": [],
                 "gaps": ["No official source was found for this request. Check your comune's website directly."]}
     user = (
-        f"Task: {TASKS[task]}\nCity: {city}\nPerson: {eu}\nSituation: {situation or 'not specified'}\n\n"
+        f"Task: {what}\nCity: {city}\nPerson: {eu}\nSituation: {situation or 'not specified'}\n\n"
         f"SOURCES:\n{_sources_block(sources)}"
     )
     raw = clients.chat_json(PLAN_SYSTEM, user)
@@ -81,11 +111,11 @@ def plan(task: str, city: str, nationality: str, situation: str = "") -> dict:
 
 
 LETTER_SYSTEM = """You explain official Italian letters (Agenzia delle Entrate, INPS, comune, prefettura, questura...)
-to people who may not read Italian well. Use only what the letter says. Reply with JSON:
-{"sender": str, "kind": str, "summary": str (plain English, max 5 sentences),
- "actions": [str], "deadlines": [{"what": str, "date": "YYYY-MM-DD"}],
- "amounts": [{"what": str, "euro": number}], "urgency": "low"|"medium"|"high",
- "words_to_know": [{"italian": str, "english": str}]}
+to people who may not read Italian well. Use only what the letter says. Write in {language}. Reply with JSON:
+{{"sender": str, "kind": str, "summary": str (max 5 sentences),
+ "actions": [str], "deadlines": [{{"what": str, "date": "YYYY-MM-DD"}}],
+ "amounts": [{{"what": str, "euro": number}}], "urgency": "low"|"medium"|"high",
+ "words_to_know": [{{"italian": str, "english": str}}]}}
 Only put a date in deadlines if the letter states an exact date. If the letter is not an official letter, say so in summary."""
 
 MAX_LETTER_CHARS = 15000
@@ -102,8 +132,10 @@ def letter_text(filename: str, data: bytes) -> str:
     return text[:MAX_LETTER_CHARS]
 
 
-def explain_letter(text: str) -> dict:
-    raw = clients.chat_json(LETTER_SYSTEM, text)
+def explain_letter(text: str, lang: str = "en") -> dict:
+    if lang not in LANGUAGES:
+        raise ValueError(f"lang must be one of {sorted(LANGUAGES)}")
+    raw = clients.chat_json(LETTER_SYSTEM.format(language=LANGUAGES[lang]), text)
     deadlines = []
     for d in raw.get("deadlines") or []:
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(d.get("date", ""))):
@@ -111,10 +143,34 @@ def explain_letter(text: str) -> dict:
                 date.fromisoformat(d["date"])
             except ValueError:
                 continue
-            if any(form in text for form in _date_forms(d["date"])):
-                deadlines.append(d)
+            found = _find_date(text, d["date"])
+            if found:
+                # Show the reader where the date is written, so they can check it themselves.
+                deadlines.append({**d, "match": found.group(0), "quote": _quote(text, found)})
     raw["deadlines"] = deadlines  # only dates that actually appear in the letter
+    raw["lang"] = lang
     return raw
+
+
+def _find_date(text: str, iso: str) -> re.Match | None:
+    """Where the date is written in the letter, or None. "5/11/2026" must not match inside "25/11/2026"."""
+    for form in _date_forms(iso):
+        m = re.search(rf"(?<!\d){re.escape(form)}(?!\d)", text, re.I)
+        if m:
+            return m
+    return None
+
+
+def _quote(text: str, m: re.Match, width: int = 70) -> str:
+    start, end = max(0, m.start() - width), min(len(text), m.end() + width)
+    words = text[start:end].split()
+    # Do not show half words at the cut.
+    if start > 0 and not text[start - 1].isspace() and len(words) > 1:
+        words = words[1:]
+    if end < len(text) and not text[end].isspace() and len(words) > 1:
+        words = words[:-1]
+    snippet = " ".join(words)
+    return ("…" if start else "") + snippet + ("…" if end < len(text) else "")
 
 
 MONTHS_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto",
