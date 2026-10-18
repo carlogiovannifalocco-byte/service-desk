@@ -46,19 +46,29 @@ flowchart LR
 - **Two domain filters.** Tavily's `include_domains` restricts the search, and Service Desk checks every returned URL again against the allowlist (it rejects look-alikes such as `agenziaentrate.gov.it.evil.com`).
 - **Deadlines are never invented.** A date from the letter explanation is kept only if it is written in the letter (ISO, `30/11/2026`, `30.11.2026` or `30 novembre 2026`), and not merely as part of another date (`5/11/2026` does not match inside `25/11/2026`). The API returns the matching text and the sentence around it, and the UI shows it.
 - **Privacy.** Nothing is stored on the server. Letters are sent to the model for one answer and dropped. Ticked steps and the last plan live in your browser's local storage.
-- **Open models.** Inference runs on [Nebius Token Factory](https://tokenfactory.nebius.com) with an NVIDIA open model (Nemotron family) through its OpenAI-compatible API, so the same code runs on any self-hosted OpenAI-compatible server.
+- **Open models.** Inference runs on [Nebius Token Factory](https://tokenfactory.nebius.com) with an NVIDIA open model, **Nemotron 3 Super** (`nvidia/nemotron-3-super-120b-a12b`), through its OpenAI-compatible API, so the same code runs on any self-hosted OpenAI-compatible server. See [Which model and why](#which-model-and-why).
+- **Robust to how the model answers.** The model is asked for JSON (`response_format: json_object`), but the reply is still parsed defensively: `<think>` blocks, a separate reasoning field, ```` ```json ```` fences and prose around the object are all handled. If a model rejects an optional request field (JSON mode, reasoning effort), Service Desk retries once without it and remembers. Rate limits (429), overload (503/529) and dropped connections are retried with `Retry-After`; every other failure becomes a readable message (bad key, budget exhausted, unknown model, Tavily credit limit) and a retry button in the UI.
 
 ## Run it
 
+You need two keys:
+
+- **Nebius Token Factory**: create one at [tokenfactory.nebius.com](https://tokenfactory.nebius.com) (API keys). Requests go to `https://api.tokenfactory.nebius.com/v1/chat/completions` with `Authorization: Bearer <key>`.
+- **Tavily**: create one at [app.tavily.com](https://app.tavily.com) (keys start with `tvly-`). Requests go to `https://api.tavily.com/search` with `Authorization: Bearer <key>`. Each plan makes one *advanced* search (2 credits).
+
 ```bash
 pip install -r requirements.txt
-export NEBIUS_API_KEY=...          # Nebius Token Factory
-export NEBIUS_MODEL=...            # an NVIDIA Nemotron model id from the Token Factory model list
-export TAVILY_API_KEY=...
+export NEBIUS_API_KEY=...
+export TAVILY_API_KEY=tvly-...
+python scripts/smoke_test.py       # optional: checks both keys end to end
 uvicorn service_desk.main:app --reload
 ```
 
 Then open http://localhost:8000.
+
+### Check your keys in one command
+
+`python scripts/smoke_test.py` makes the real calls the app makes: one Tavily search, one cited plan (*tax code*, Milano, Brazil: search + model) and one explanation of the fictional sample letter (model only). It prints the official URLs found, the cited steps, the deadlines found in the letter and how long the search and the model took, and ends with `ALL OK` (exit code 0) or says which step failed and why. It costs about 4 Tavily credits and a few thousand tokens.
 
 Or with Docker: `docker build -t service-desk . && docker run -p 8000:8000 -e NEBIUS_API_KEY -e NEBIUS_MODEL -e TAVILY_API_KEY service-desk`.
 
@@ -66,9 +76,23 @@ Or with Docker: `docker build -t service-desk . && docker run -p 8000:8000 -e NE
 |---|---|---|
 | `NEBIUS_API_KEY` | required | Token Factory key |
 | `NEBIUS_BASE_URL` | `https://api.tokenfactory.nebius.com/v1` | Any OpenAI-compatible endpoint works |
-| `NEBIUS_MODEL` | `nvidia/Llama-3_3-Nemotron-Super-49B-v1_5` | Check the exact id in the Token Factory console |
+| `NEBIUS_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Any chat model id from the Token Factory model list |
+| `NEBIUS_REASONING_EFFORT` | not sent | Optional `reasoning_effort` (`low`, `medium`, `high`...) for faster or deeper answers; dropped automatically if the model rejects it |
+| `NEBIUS_MAX_TOKENS` | `8192` | Output budget per answer, reasoning tokens included |
+| `NEBIUS_TIMEOUT` | `180` | Seconds to wait for the model |
 | `TAVILY_API_KEY` | required | Tavily search |
 | `SERVICE_DESK_DEMO` | off | `1` serves canned example answers instead of calling Tavily and Nebius |
+
+### Which model and why
+
+**NVIDIA Nemotron 3 Super** (`nvidia/nemotron-3-super-120b-a12b`, open weights, a mixture-of-experts model with 120B parameters, 12B active per token) on Token Factory.
+
+- It is an NVIDIA open model called at runtime through Token Factory, which is what the hackathon rules ask for; the Best Apps and Agents track suggests Nemotron models on Token Factory (Ultra for heavy reasoning, Nano or Super for fast calls).
+- The id is the one in Nebius's own [Nemotron code sample](https://nebius.com/services/token-factory/nemotron), and the model Nebius [recommends as the replacement](https://docs.tokenfactory.nebius.com/august-2026-deprecation-notice) for the Llama 3.1 Nemotron Ultra model it retired on 31 August 2026. Token Factory does not reroute retired ids, so the default is an id Nebius currently documents.
+- The plan prompt carries up to six official pages and asks for a structured answer where every item cites a source number. That is a reading-and-reasoning task more than a writing one, so a reasoning model with a long context is a better fit than the smallest, fastest option; anything it cites wrongly is still removed by the citation check.
+- It is a reasoning model. Its thinking is kept out of the answer (Service Desk reads only the JSON), and `NEBIUS_MAX_TOKENS` leaves room for it.
+
+For faster, cheaper answers, `NEBIUS_MODEL=nvidia/Nemotron-3_5-Lightning` is the smaller Nemotron that Nebius recommends in the same deprecation notice. The model list in your Token Factory console is the source of truth; `NEBIUS_BASE_URL` also accepts a regional endpoint such as `https://api.tokenfactory.us-central1.nebius.com/v1`.
 
 ## Try it without API keys
 
@@ -97,7 +121,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-They cover the domain allowlist (including look-alike hosts), filtering of unofficial search results, removal of uncited steps and invalid citations, skipping the model when there are no sources, free-text questions, deadline verification against the letter text (including dates hidden inside other dates) and the quote shown for each deadline, the explanation language, PDF upload, the config endpoint not leaking keys, demo mode going through the real checks, `.ics` escaping, and API errors. External services are always mocked.
+They cover the exact request shapes sent to Tavily and Token Factory (URL, bearer header, parameters, the 400-character Tavily query limit), parsing the model's JSON out of `<think>` blocks, code fences, reasoning fields and surrounding prose, retries on 429/503/529 with `Retry-After`, falling back when a model rejects JSON mode, readable errors for bad keys, exhausted budgets and unknown models, the domain allowlist (including look-alike hosts), filtering of unofficial search results, removal of uncited steps and invalid citations, skipping the model when there are no sources, free-text questions, deadline verification against the letter text (including dates hidden inside other dates) and the quote shown for each deadline, the explanation language, PDF upload, the config endpoint not leaking keys, demo mode going through the real checks, `.ics` escaping, and API errors. External services are always mocked.
 
 ## Not legal advice
 

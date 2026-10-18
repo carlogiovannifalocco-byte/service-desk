@@ -19,16 +19,15 @@ def test_official_domain_filter():
 
 
 def test_search_drops_unofficial_results(monkeypatch):
-    class R:
-        def raise_for_status(self):
-            pass
-
-        def json(self):
-            return {"results": SOURCES + [{"title": "blog", "url": "https://blog.example.com", "content": "x"}]}
-
     sent = {}
+
+    def fake_post(url, headers, json, timeout):
+        sent.update(json)
+        return clients.httpx.Response(200, json={"results": SOURCES + [
+            {"title": "blog", "url": "https://blog.example.com", "content": "x"}]})
+
     monkeypatch.setenv("TAVILY_API_KEY", "k")
-    monkeypatch.setattr(clients.httpx, "post", lambda url, json, timeout: sent.update(json) or R())
+    monkeypatch.setattr(clients.httpx, "post", fake_post)
     out = clients.search("codice fiscale")
     assert [r["url"] for r in out] == [s["url"] for s in SOURCES]
     assert "agenziaentrate.gov.it" in sent["include_domains"]
