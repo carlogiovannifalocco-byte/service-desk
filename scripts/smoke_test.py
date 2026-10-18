@@ -3,8 +3,8 @@
     export NEBIUS_API_KEY=... TAVILY_API_KEY=...
     python scripts/smoke_test.py
 
-Runs one Tavily search, one cited plan (search + model) and one letter explanation (model only),
-then prints what came back and how long each step took. Exits 1 if anything fails.
+Lists the NVIDIA models your Nebius key can use, then runs one Tavily search, one cited plan
+(search + model) and one letter explanation (model only), and prints what came back and how long each step took. Exits 1 if anything fails.
 Optional: NEBIUS_MODEL, NEBIUS_BASE_URL, NEBIUS_REASONING_EFFORT, NEBIUS_MAX_TOKENS (see README).
 Uses a few Tavily credits (advanced search costs 2 per call) and a few thousand model tokens.
 """
@@ -17,6 +17,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import httpx  # noqa: E402
 
 from service_desk import clients, core, demo  # noqa: E402
 
@@ -49,6 +51,16 @@ def step(name, fn):
     return out, True
 
 
+def list_nvidia_models() -> list[str]:
+    """Model ids starting with nvidia/ (https://docs.tokenfactory.nebius.com/api-reference/models/list-models)."""
+    base = os.getenv("NEBIUS_BASE_URL", clients.DEFAULT_BASE_URL).rstrip("/")
+    resp = httpx.get(f"{base}/models", headers={"Authorization": f"Bearer {os.environ['NEBIUS_API_KEY']}"},
+                     timeout=30)
+    if resp.status_code != 200:
+        raise clients.ServiceError(f"GET /models failed ({resp.status_code}): {clients._error_detail(resp)}")
+    return sorted(m["id"] for m in resp.json().get("data", []) if str(m.get("id", "")).lower().startswith("nvidia/"))
+
+
 def main() -> int:
     missing = [k for k in ("NEBIUS_API_KEY", "TAVILY_API_KEY") if not os.getenv(k)]
     if missing:
@@ -56,6 +68,13 @@ def main() -> int:
         return 2
     print(f"model:    {os.getenv('NEBIUS_MODEL', clients.DEFAULT_MODEL)}")
     print(f"endpoint: {os.getenv('NEBIUS_BASE_URL', clients.DEFAULT_BASE_URL)}")
+    # Informational only: a failure here does not fail the run if the model calls below work.
+    models, passed = step("Token Factory: NVIDIA models available to this key (GET /v1/models)", list_nvidia_models)
+    for m in models or []:
+        print(f"   - {m}" + ("   <- in use" if m == os.getenv("NEBIUS_MODEL", clients.DEFAULT_MODEL) else ""))
+    if passed and os.getenv("NEBIUS_MODEL", clients.DEFAULT_MODEL) not in (models or []):
+        print("   WARNING: the model in use is not in this list; set NEBIUS_MODEL to one of the ids above")
+
     clients.search = timed("search", clients.search)
     clients.chat_json = timed("model", clients.chat_json)
     ok = True

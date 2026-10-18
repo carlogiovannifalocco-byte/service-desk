@@ -68,7 +68,7 @@ Then open http://localhost:8000.
 
 ### Check your keys in one command
 
-`python scripts/smoke_test.py` makes the real calls the app makes: one Tavily search, one cited plan (*tax code*, Milano, Brazil: search + model) and one explanation of the fictional sample letter (model only). It prints the official URLs found, the cited steps, the deadlines found in the letter and how long the search and the model took, and ends with `ALL OK` (exit code 0) or says which step failed and why. It costs about 4 Tavily credits and a few thousand tokens.
+`python scripts/smoke_test.py` first lists the `nvidia/` models your Nebius key can use (`GET /v1/models`, the one in use is marked), then makes the real calls the app makes: one Tavily search, one cited plan (*tax code*, Milano, Brazil: search + model) and one explanation of the fictional sample letter (model only). It prints the official URLs found, the cited steps, the deadlines found in the letter and how long the search and the model took, and ends with `ALL OK` (exit code 0) or says which step failed and why. It costs about 4 Tavily credits and a few thousand tokens.
 
 Or with Docker: `docker build -t service-desk . && docker run -p 8000:8000 -e NEBIUS_API_KEY -e NEBIUS_MODEL -e TAVILY_API_KEY service-desk`.
 
@@ -92,7 +92,7 @@ Or with Docker: `docker build -t service-desk . && docker run -p 8000:8000 -e NE
 - The plan prompt carries up to six official pages and asks for a structured answer where every item cites a source number. That is a reading-and-reasoning task more than a writing one, so a reasoning model with a long context is a better fit than the smallest, fastest option; anything it cites wrongly is still removed by the citation check.
 - It is a reasoning model. Its thinking is kept out of the answer (Service Desk reads only the JSON), and `NEBIUS_MAX_TOKENS` leaves room for it.
 
-For faster, cheaper answers, `NEBIUS_MODEL=nvidia/Nemotron-3_5-Lightning` is the smaller Nemotron that Nebius recommends in the same deprecation notice. The model list in your Token Factory console is the source of truth; `NEBIUS_BASE_URL` also accepts a regional endpoint such as `https://api.tokenfactory.us-central1.nebius.com/v1`.
+For faster, cheaper answers, `NEBIUS_MODEL=nvidia/Nemotron-3_5-Lightning` is the smaller Nemotron that Nebius recommends in the same deprecation notice; the smoke test shows whether your key can use it. The model list in your Token Factory console is the source of truth; `NEBIUS_BASE_URL` also accepts a regional endpoint such as `https://api.tokenfactory.us-central1.nebius.com/v1`.
 
 ## Try it without API keys
 
