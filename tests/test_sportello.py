@@ -227,3 +227,33 @@ def test_calendar_rejects_malformed_events():
     c = TestClient(app)
     assert c.post("/api/calendar.ics", json={"events": [{"what": 5, "date": "2026-11-30"}]}).status_code == 400
     assert c.post("/api/calendar.ics", json={"events": [{"what": "x", "date": "30/11/2026"}]}).status_code == 400
+
+
+def test_public_demo_guard_caches_and_limits(monkeypatch):
+    from service_desk import main
+
+    monkeypatch.setattr(main, "guard", main.Guard())
+    calls = []
+    monkeypatch.setattr(clients, "chat_json", lambda s, u, max_tokens=2000: calls.append(u) or {"summary": "ok", "deadlines": []})
+    c = TestClient(app)
+
+    # Limits off by default: a local run is never throttled or cached.
+    for _ in range(3):
+        assert c.post("/api/letter", data={"text": LETTER}).status_code == 200
+    assert len(calls) == 3
+
+    monkeypatch.setenv("CACHE_SECONDS", "3600")
+    monkeypatch.setenv("PER_IP_HOURLY_LIMIT", "2")
+    assert c.post("/api/letter", data={"text": LETTER}).status_code == 200
+    assert c.post("/api/letter", data={"text": LETTER}).status_code == 200  # same letter: from memory
+    assert len(calls) == 4
+    assert c.post("/api/letter", data={"text": LETTER + " bis"}).status_code == 200
+    r = c.post("/api/letter", data={"text": LETTER + " ter"})
+    assert r.status_code == 429 and "per hour" in r.json()["detail"]
+    other = {"X-Forwarded-For": "203.0.113.9"}
+    assert c.post("/api/letter", data={"text": LETTER + " ter"}, headers=other).status_code == 200
+
+    monkeypatch.setenv("DAILY_LIMIT", "1")
+    r = c.post("/api/letter", data={"text": LETTER + " quater"}, headers={"X-Forwarded-For": "198.51.100.7"})
+    assert r.status_code == 429 and "today's quota" in r.json()["detail"]
+    assert c.post("/api/letter", data={"text": LETTER}).status_code == 200  # cached answers still work

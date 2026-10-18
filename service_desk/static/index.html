@@ -690,6 +690,7 @@ function friendlyError(e, what) {
   if (/TAVILY_API_KEY/.test(msg)) return ["Search isn't set up", "This server has no TAVILY_API_KEY, so it can't search official sources yet. Whoever runs it needs to set the key and restart."];
   if (/search failed/.test(msg)) return ["Search didn't answer", "The official-source search failed. This is usually temporary, so try again in a moment."];
   if (/model call failed|did not return JSON|invalid JSON/.test(msg)) return ["The model didn't answer properly", "The language model returned an error or an unreadable answer. Try again; it usually works the second time."];
+  if (e.status === 429) return ["The demo needs a break", msg.charAt(0).toUpperCase() + msg.slice(1) + "."];
   if (e.status === 413) return ["That file is too big", "Letters can be up to 5 MB. Try pasting the text instead."];
   if (e.status === 400) return [`We couldn't ${what}`, msg.charAt(0).toUpperCase() + msg.slice(1) + "."];
   return [`We couldn't ${what}`, msg];

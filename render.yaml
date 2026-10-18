@@ -1,0 +1,25 @@
+# Public demo on Render (free plan) with real keys: Tavily searches official sources and an NVIDIA Nemotron model
+# on Nebius Token Factory writes the cited plan. Nothing the user sends is stored. To keep the demo inside its API
+# quota, identical requests are answered from memory for 6 hours and fresh ones are capped per visitor and per day.
+# Free instances sleep after 15 minutes without traffic; the first visit after that takes about a minute.
+services:
+  - type: web
+    name: service-desk-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit      # redeploy on every push to main
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false                # your Nebius Token Factory key, entered in the Render dashboard
+      - key: TAVILY_API_KEY
+        sync: false                # your Tavily key, entered in the Render dashboard
+      - key: NEBIUS_MODEL
+        value: nvidia/nemotron-3-super-120b-a12b
+      - key: CACHE_SECONDS
+        value: "21600"
+      - key: PER_IP_HOURLY_LIMIT
+        value: "10"
+      - key: DAILY_LIMIT
+        value: "40"                 # a plan costs about 4 Tavily credits; the free plan has 1,000 a month

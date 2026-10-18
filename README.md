@@ -69,6 +69,12 @@ uvicorn service_desk.main:app --reload
 
 Then open http://localhost:8000.
 
+### Public demo on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/carlogiovannifalocco-byte/service-desk)
+
+`render.yaml` runs the same image on Render's free plan with real keys: enter `NEBIUS_API_KEY` and `TAVILY_API_KEY` when Render asks. A public demo spends your quota, so three variables keep it in check: `CACHE_SECONDS` answers an identical request from memory (6 hours), `PER_IP_HOURLY_LIMIT` caps fresh requests per visitor (10 an hour) and `DAILY_LIMIT` caps them in total (40 a day; a plan costs about 4 Tavily credits). Over a limit the page says so in plain words. All three default to off, so a local run is never throttled. A free instance sleeps after 15 minutes, so the first visit after that takes about a minute.
+
 ### Check your keys in one command
 
 `python scripts/smoke_test.py` first lists the `nvidia/` models your Nebius key can use (`GET /v1/models`, the one in use is marked), then makes the real calls the app makes: one Tavily search, one cited plan (*tax code*, Milano, Brazil: search + model) and one explanation of the fictional sample letter (model only). It prints the official URLs found, the cited steps, the deadlines found in the letter and how long the search and the model took, and ends with `ALL OK` (exit code 0) or says which step failed and why. It costs about 5 Tavily credits and a few thousand tokens, and also prints the verification report (quotes found word for word, pages read with Tavily Extract).

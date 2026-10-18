@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
+import threading
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
@@ -20,6 +25,69 @@ if DEMO:
     demo.install()
 
 app = FastAPI(title="Service Desk")
+
+
+class Guard:
+    """Keeps a public demo inside its API quota. Identical requests are answered from memory for a few hours
+    (official pages do not change by the minute), and fresh ones are capped per visitor per hour and per day in
+    total. Limits come from the environment and default to off, so a local run behaves exactly as before."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.cache: dict[str, tuple[float, dict]] = {}
+        self.per_ip: dict[str, deque] = defaultdict(deque)
+        self.day, self.today_count = "", 0
+
+    @staticmethod
+    def _limit(name: str) -> int:
+        try:
+            return max(0, int(os.getenv(name, "0")))
+        except ValueError:
+            return 0
+
+    def key(self, *parts) -> str:
+        return hashlib.sha256(json.dumps(parts, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+    def cached(self, key: str) -> dict | None:
+        ttl = self._limit("CACHE_SECONDS")
+        with self.lock:
+            hit = self.cache.get(key)
+            return hit[1] if hit and ttl and time.time() - hit[0] < ttl else None
+
+    def store(self, key: str, result: dict) -> None:
+        if self._limit("CACHE_SECONDS"):
+            with self.lock:
+                if len(self.cache) > 500:
+                    self.cache.clear()
+                self.cache[key] = (time.time(), result)
+
+    def admit(self, ip: str) -> None:
+        """Count one fresh request, or raise 429 with a sentence the UI can show as is."""
+        hourly, daily = self._limit("PER_IP_HOURLY_LIMIT"), self._limit("DAILY_LIMIT")
+        now = time.time()
+        with self.lock:
+            day = time.strftime("%Y-%m-%d", time.gmtime(now))
+            if day != self.day:
+                self.day, self.today_count = day, 0
+            if daily and self.today_count >= daily:
+                raise HTTPException(429, "this public demo has used today's quota; try again tomorrow or run it with your own keys")
+            if hourly:
+                seen = self.per_ip[ip]
+                while seen and now - seen[0] > 3600:
+                    seen.popleft()
+                if len(seen) >= hourly:
+                    raise HTTPException(429, f"this public demo allows {hourly} new requests per hour per visitor; try again later")
+                seen.append(now)
+            self.today_count += 1
+
+
+guard = Guard()
+
+
+def client_ip(request: Request) -> str:
+    # Behind Render's proxy the visitor is the first X-Forwarded-For entry.
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return forwarded.split(",")[0].strip() or (request.client.host if request.client else "")
 
 
 @app.get("/")
@@ -67,9 +135,15 @@ class PlanRequest(BaseModel):
 
 
 @app.post("/api/plan")
-def make_plan(req: PlanRequest):
+def make_plan(req: PlanRequest, request: Request):
+    key = guard.key("plan", req.model_dump())
+    if (hit := guard.cached(key)) is not None:
+        return hit
+    guard.admit(client_ip(request))
     try:
-        return core.plan(req.task, req.city, req.nationality, req.situation, req.question, req.lang)
+        result = core.plan(req.task, req.city, req.nationality, req.situation, req.question, req.lang)
+        guard.store(key, result)
+        return result
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     except ServiceError as exc:
@@ -77,7 +151,8 @@ def make_plan(req: PlanRequest):
 
 
 @app.post("/api/letter")
-async def letter(file: UploadFile | None = None, text: str | None = Form(None), lang: str = Form("en")):
+async def letter(request: Request, file: UploadFile | None = None, text: str | None = Form(None),
+                 lang: str = Form("en")):
     try:
         if file is not None:
             data = await file.read(MAX_UPLOAD + 1)
@@ -88,7 +163,13 @@ async def letter(file: UploadFile | None = None, text: str | None = Form(None), 
             content = text.strip()[: core.MAX_LETTER_CHARS]
         else:
             raise HTTPException(400, "send a file or text")
-        return core.explain_letter(content, lang)
+        key = guard.key("letter", content, lang)
+        if (hit := guard.cached(key)) is not None:
+            return hit
+        guard.admit(client_ip(request))
+        result = core.explain_letter(content, lang)
+        guard.store(key, result)
+        return result
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     except ServiceError as exc:
