@@ -93,6 +93,10 @@ def main() -> int:
     if plan:
         print(f"   summary: {plan['summary'][:200]}")
         print(f"   {len(plan['steps'])} cited step(s), {len(plan['sources'])} source(s), {len(plan['gaps'])} gap(s)")
+        v = plan.get("verification") or {}
+        print(f"   verification: {v.get('quoted')}/{v.get('claims')} quoted word for word, "
+              f"{v.get('pages_read')}/{v.get('pages_total')} pages read with Tavily Extract ({v.get('page_check')}), "
+              f"{v.get('pages_dated')} dated")
         for i, s in enumerate(plan["steps"], 1):
             print(f"   {i}. {s.get('title', '')}  [sources {s['sources']}]")
         for g in plan["gaps"]:

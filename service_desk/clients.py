@@ -6,6 +6,7 @@ Request shapes follow the official docs (checked October 2026):
 - Token Factory JSON mode: https://docs.tokenfactory.nebius.com/ai-models-inference/json
 - Token Factory rate limits (429 + Retry-After): https://docs.tokenfactory.nebius.com/ai-models-inference/rate-limits
 - Tavily search: https://docs.tavily.com/documentation/api-reference/endpoint/search
+- Tavily extract: https://docs.tavily.com/documentation/api-reference/endpoint/extract
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ OFFICIAL_DOMAINS = [
     "esteri.it",
     "anagrafenazionale.interno.it",
     "spid.gov.it",
+    "ilportaledellautomobilista.it",
     "comune.milano.it",
     "comune.roma.it",
     "comune.torino.it",
@@ -43,6 +45,8 @@ OFFICIAL_DOMAINS = [
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
 TAVILY_URL = "https://api.tavily.com/search"
+TAVILY_EXTRACT_URL = "https://api.tavily.com/extract"
+MAX_PAGE_CHARS = 60000  # enough for any PA page body; only used for checks, never sent to the model
 TAVILY_MAX_QUERY = 400  # Tavily rejects longer queries ("Max query length is 400 characters").
 
 RETRY_STATUS = {429, 500, 502, 503, 504, 529}  # 529 = Token Factory "inference service overloaded"
@@ -160,8 +164,39 @@ def search(query: str, max_results: int = 6) -> list[dict]:
             continue
         seen.add(url)
         out.append({"title": (r.get("title") or "").strip() or url, "url": url,
-                    "content": (r.get("content") or "")[:1500]})
+                    "content": (r.get("content") or "")[:1500], "retrieved_at": _now()})
     return out
+
+
+def _now() -> str:
+    from .verify import now_iso
+
+    return now_iso()
+
+
+def extract(urls: list[str]) -> dict[str, str]:
+    """Full text of official pages (Tavily Extract, basic depth: 1 credit per 5 pages). {url: text}.
+
+    Used to check quotes and page dates against the whole page, not just the search excerpt. Pages Tavily could
+    not read are simply missing from the result; a failed call raises ServiceError."""
+    key = os.getenv("TAVILY_API_KEY")
+    if not key:
+        raise ServiceError("TAVILY_API_KEY is not set")
+    urls = [u for u in dict.fromkeys(urls) if is_official(u)][:20]  # Tavily accepts at most 20 URLs per call
+    if not urls:
+        return {}
+    resp = _post("Tavily", TAVILY_EXTRACT_URL, headers={"Authorization": f"Bearer {key}"},
+                 payload={"urls": urls, "extract_depth": "basic", "format": "text"},
+                 timeout=httpx.Timeout(30.0, connect=10.0))
+    if resp.status_code != 200:
+        msg = TAVILY_ERRORS.get(resp.status_code, f"Tavily extract failed ({resp.status_code})")
+        raise ServiceError(f"{msg}: {_error_detail(resp)}")
+    try:
+        results = resp.json().get("results") or []
+    except (ValueError, AttributeError) as exc:
+        raise ServiceError("Tavily returned an unreadable response") from exc
+    return {r["url"]: (r.get("raw_content") or "")[:MAX_PAGE_CHARS] for r in results
+            if isinstance(r, dict) and is_official(r.get("url") or "") and r.get("raw_content")}
 
 
 # ---------------------------------------------------------------- Nebius Token Factory

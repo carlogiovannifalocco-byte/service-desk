@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 
 from pypdf import PdfReader
 
-from . import clients
+from . import clients, verify
 
 TASKS = {
     "codice_fiscale": "getting an Italian tax code (codice fiscale)",
@@ -19,6 +19,9 @@ TASKS = {
     "spid": "getting a SPID digital identity",
     "identity_card": "getting an electronic identity card (CIE)",
     "isee": "getting an ISEE certificate",
+    "driving_licence": "converting a foreign driving licence into an Italian one (conversione patente estera)",
+    "lease_registration": "registering a rental contract with the Agenzia delle Entrate (registrazione contratto di locazione)",
+    "partita_iva": "opening a VAT number as a freelancer (apertura partita IVA)",
 }
 
 # Display metadata for the UI. Keys match TASKS; "other" is the free-text question.
@@ -37,6 +40,12 @@ TASK_DETAILS = {
                       "blurb": "The Italian ID card, booked at your comune."},
     "isee": {"title": "ISEE certificate", "italian": "ISEE",
              "blurb": "The income indicator used for school fees, bonuses and reduced tariffs."},
+    "driving_licence": {"title": "Convert a driving licence", "italian": "Conversione patente estera",
+                        "blurb": "Swap a licence from a non-EU country for an Italian one, where an agreement allows it."},
+    "lease_registration": {"title": "Register a rental contract", "italian": "Registrazione contratto di locazione",
+                           "blurb": "Every lease over 30 days a year must be registered; who does it and the fees."},
+    "partita_iva": {"title": "Open a VAT number", "italian": "Apertura partita IVA",
+                    "blurb": "Start working as a freelancer: the form, the tax regime and INPS registration."},
 }
 
 OTHER = "other"
@@ -44,16 +53,26 @@ LANGUAGES = {"en": "plain English", "it": "simple, plain Italian"}
 
 PLAN_SYSTEM = """You help people in Italy (often foreigners) with public administration tasks.
 You receive the person's situation and numbered SOURCES from official Italian websites.
-Write a practical plan in plain English. Rules:
+Write a practical plan in {language}. Rules:
 - Use ONLY facts stated in the SOURCES. Every step must cite at least one source number in "sources".
 - If the sources do not cover something important, say so in "gaps" instead of guessing.
 - Fees, deadlines and documents must come from the sources; never invent amounts.
 - Note when rules differ by comune or nationality.
 - "cost" and "time" are optional: fill them only if the cited sources state a fee or a duration, otherwise "".
+- "quote": copy word for word, in the source's own language, the shortest passage (at most 30 words) of a cited
+  source that supports the item. Do not translate or reword it. Use "" if no single passage supports it.
 Reply with JSON:
-{"summary": str, "steps": [{"title": str, "detail": str, "where": str, "cost": str, "time": str, "sources": [int]}],
- "documents": [{"name": str, "sources": [int]}], "deadlines": [{"what": str, "rule": str, "sources": [int]}],
- "gaps": [str]}"""
+{"summary": str, "steps": [{"title": str, "detail": str, "where": str, "cost": str, "time": str, "sources": [int],
+ "quote": str}], "documents": [{"name": str, "sources": [int], "quote": str}],
+ "deadlines": [{"what": str, "rule": str, "sources": [int], "quote": str}], "gaps": [str]}"""
+
+PLAN_TEXT = {
+    "en": {"none": "No official source was found for this request. Check your comune's website directly.",
+           "removed": "{n} step(s) were removed because they were not backed by an official source."},
+    "it": {"none": "Non è stata trovata nessuna fonte ufficiale per questa richiesta. Controlla direttamente il sito "
+                   "del tuo comune.",
+           "removed": "{n} passaggi sono stati tolti perché nessuna fonte ufficiale li confermava."},
+}
 
 
 def _sources_block(sources: list[dict]) -> str:
@@ -70,8 +89,10 @@ def _keep_cited(items: list[dict], n_sources: int) -> list[dict]:
     return kept
 
 
-def plan(task: str, city: str, nationality: str, situation: str = "", question: str = "") -> dict:
+def plan(task: str, city: str, nationality: str, situation: str = "", question: str = "", lang: str = "en") -> dict:
     """task is a key of TASKS, or "other" with the person's own question (same grounding rules)."""
+    if lang not in LANGUAGES:
+        raise ValueError(f"lang must be one of {sorted(LANGUAGES)}")
     if task == OTHER:
         question = " ".join(question.split())
         if len(question) < 5:
@@ -81,33 +102,54 @@ def plan(task: str, city: str, nationality: str, situation: str = "", question: 
         what = TASKS[task]
     else:
         raise ValueError(f"unknown task, choose one of {sorted(TASKS) + [OTHER]}")
+    text = PLAN_TEXT[lang]
     is_eu = nationality.strip().lower() in ("eu", "eu citizen")
     eu = "EU citizen" if is_eu else f"citizen of {nationality}"
     who = "EU citizens" if is_eu else "non-EU foreigners"
     query = f"{what} {city} requirements documents procedure {who}"
     sources = clients.search(query)
     if not sources:
-        return {"summary": "", "steps": [], "documents": [], "deadlines": [], "sources": [],
-                "gaps": ["No official source was found for this request. Check your comune's website directly."]}
+        return {"summary": "", "steps": [], "documents": [], "deadlines": [], "sources": [], "lang": lang,
+                "gaps": [text["none"]], "verification": None}
     user = (
         f"Task: {what}\nCity: {city}\nPerson: {eu}\nSituation: {situation or 'not specified'}\n\n"
         f"SOURCES:\n{_sources_block(sources)}"
     )
-    raw = clients.chat_json(PLAN_SYSTEM, user)
+    raw = clients.chat_json(PLAN_SYSTEM.replace("{language}", LANGUAGES[lang]), user)
     n = len(sources)
-    steps = _keep_cited(raw.get("steps"), n)
-    dropped = len(raw.get("steps") or []) - len(steps)
+    groups = {key: _keep_cited(raw.get(key), n) for key in ("steps", "documents", "deadlines")}
+    dropped = sum(len(raw.get(key) or []) - len(groups[key]) for key in groups)
+    removed_steps = len(raw.get("steps") or []) - len(groups["steps"])
     gaps = list(raw.get("gaps") or [])
-    if dropped:
-        gaps.append(f"{dropped} step(s) were removed because they were not backed by an official source.")
+    if removed_steps:
+        gaps.append(text["removed"].format(n=removed_steps))
+
+    # Verification: read the full official pages (Tavily Extract), then check every quote and each page's own
+    # "last updated" date. If the extract call fails, quotes are still checked against the search excerpts.
+    pages, page_status = {}, "ok"
+    try:
+        pages = {_url_key(u): t for u, t in clients.extract([s["url"] for s in sources]).items()}
+    except clients.ServiceError as exc:
+        page_status = f"unavailable: {exc}"
+    out_sources, texts = [], {}
+    for i, s in enumerate(sources, 1):
+        page = pages.get(_url_key(s["url"]), "")
+        texts[i] = [s.get("content", ""), page]
+        out_sources.append({"n": i, "title": s["title"], "url": s["url"], "retrieved_at": s.get("retrieved_at"),
+                            "page_read": bool(page), "updated": verify.page_updated(page) if page else None})
+    groups = {key: verify.check_quotes(items, texts) for key, items in groups.items()}
     return {
         "summary": raw.get("summary", ""),
-        "steps": steps,
-        "documents": _keep_cited(raw.get("documents"), n),
-        "deadlines": _keep_cited(raw.get("deadlines"), n),
+        **groups,
         "gaps": gaps,
-        "sources": [{"n": i, "title": s["title"], "url": s["url"]} for i, s in enumerate(sources, 1)],
+        "sources": out_sources,
+        "lang": lang,
+        "verification": verify.report(groups, out_sources, dropped, page_status),
     }
+
+
+def _url_key(url: str) -> str:
+    return url.split("#", 1)[0].rstrip("/").lower().replace("http://", "https://")
 
 
 LETTER_SYSTEM = """You explain official Italian letters (Agenzia delle Entrate, INPS, comune, prefettura, questura...)

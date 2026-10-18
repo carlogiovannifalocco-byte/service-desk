@@ -1,5 +1,7 @@
 """Request shapes and response parsing for Tavily and Nebius Token Factory, with HTTP mocked."""
 
+import re
+
 import httpx
 import pytest
 
@@ -42,6 +44,10 @@ def env(monkeypatch):
     clients._unsupported.clear()
 
 
+def strip_time(result: dict) -> dict:
+    return {k: v for k, v in result.items() if k != "retrieved_at"}
+
+
 def install(monkeypatch, *responses):
     fake = FakeHTTP(*responses)
     monkeypatch.setattr(clients.httpx, "post", fake)
@@ -52,7 +58,9 @@ def install(monkeypatch, *responses):
 
 def test_tavily_request_shape(monkeypatch):
     fake = install(monkeypatch, ok({"results": [OFFICIAL]}))
-    assert clients.search("codice fiscale  stranieri") == [OFFICIAL]
+    found = clients.search("codice fiscale  stranieri")
+    assert [strip_time(r) for r in found] == [OFFICIAL]
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", found[0]["retrieved_at"])
     call = fake.calls[0]
     assert call["url"] == "https://api.tavily.com/search"
     assert call["headers"] == {"Authorization": "Bearer tvly-test"}
@@ -79,7 +87,7 @@ def test_tavily_tolerates_odd_results(monkeypatch):
     ]}))
     out = clients.search("q")
     assert [r["url"] for r in out] == [OFFICIAL["url"], "https://www.inps.it/x"]
-    assert out[1] == {"title": "https://www.inps.it/x", "url": "https://www.inps.it/x", "content": ""}
+    assert strip_time(out[1]) == {"title": "https://www.inps.it/x", "url": "https://www.inps.it/x", "content": ""}
 
 
 def test_tavily_missing_results_key(monkeypatch):
@@ -92,7 +100,7 @@ def test_tavily_retries_rate_limit_then_succeeds(monkeypatch):
     monkeypatch.setattr(clients, "_sleep", waits.append)
     fake = install(monkeypatch, ok({"detail": {"error": "slow down"}}, 429, {"Retry-After": "2"}),
                    ok({"results": [OFFICIAL]}))
-    assert clients.search("q") == [OFFICIAL]
+    assert [strip_time(r) for r in clients.search("q")] == [OFFICIAL]
     assert len(fake.calls) == 2 and waits == [2.0]
 
 

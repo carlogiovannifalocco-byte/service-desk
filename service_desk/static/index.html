@@ -231,6 +231,16 @@
   .sources a { font-weight:550; text-decoration:none; color:var(--ink); }
   .sources a:hover { color:var(--accent); text-decoration:underline; }
   .sources .host { display:block; font-size:13px; color:var(--ok); }
+  .sources .fresh { display:block; font-size:12.5px; color:var(--ink-2); margin-top:2px; }
+  .sources .fresh.stale { color:var(--warn); font-weight:550; }
+  .vq { margin:10px 0 0; padding:8px 12px; border-left:3px solid var(--ok); background:var(--ok-soft); border-radius:0 8px 8px 0; font-size:14px; color:var(--ink); }
+  .vq q { quotes:"\201C" "\201D"; font-style:italic; }
+  .vq .by { display:block; margin-top:4px; font-size:12.5px; color:var(--ink-2); font-style:normal; }
+  .unq { margin-top:8px; font-size:13px; color:var(--ink-2); }
+  .qmark { color:var(--ok); font-size:12px; font-weight:650; margin-left:4px; white-space:nowrap; }
+  .vrep dl { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; margin:0; font-size:14px; }
+  .vrep dt { font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
+  .vrep dd { margin:0; color:var(--ink-2); }
 
   /* Letter */
   .letter-grid { display:grid; gap:20px; grid-template-columns:minmax(0, .95fr) minmax(0, 1.25fr); margin-top:24px; align-items:start; }
@@ -515,6 +525,13 @@
           <label for="situation">Anything else? <span class="hint">(optional)</span></label>
           <input type="text" id="situation" maxlength="1000" placeholder="e.g. student, arrived last month, renting a room">
         </div>
+        <div style="margin-top:16px">
+          <span class="label" id="plang-label">Write the plan in</span>
+          <div class="seg" role="radiogroup" aria-labelledby="plang-label">
+            <label><input type="radio" name="plang" value="en" checked><span>English</span></label>
+            <label><input type="radio" name="plang" value="it"><span>Italiano</span></label>
+          </div>
+        </div>
       </fieldset>
       <div class="form-foot">
         <button class="btn primary big" type="submit" id="plan-go">Make my plan <svg class="ico"><use href="#i-arrow"/></svg></button>
@@ -798,7 +815,7 @@ function fieldError(id, msg) {
 function readPlanForm() {
   const task = selectedTask();
   const eu = document.querySelector("input[name=cit]:checked").value === "eu";
-  const req = { task, city: $("city").value.trim(), nationality: eu ? "EU" : $("country").value.trim(), situation: $("situation").value.trim(), question: task === "other" ? $("question").value.trim() : "" };
+  const req = { task, city: $("city").value.trim(), nationality: eu ? "EU" : $("country").value.trim(), situation: $("situation").value.trim(), question: task === "other" ? $("question").value.trim() : "", lang: document.querySelector("input[name=plang]:checked").value };
   let ok = true;
   fieldError("task-err", !task ? "Choose a task, or pick “Something else” and describe it." : (task === "other" && req.question.length < 5 ? "Describe what you need to do in a few words." : ""));
   fieldError("city-err", req.city.length < 2 ? "Enter your city or comune." : "");
@@ -856,6 +873,22 @@ function renderPlan(p, req) {
     `<a class="src" href="${esc(srcBy[n].url)}" target="_blank" rel="noopener" title="${esc(srcBy[n].title)}">${icon("i-check")}<span class="dom">${esc(host(srcBy[n].url))}</span><span class="n">[${n}]</span><span class="sr-only">(opens in a new tab)</span></a>`).join("")}</div>`;
   const ticks = store.get(planKey(req), {});
   const steps = p.steps || [], docs = p.documents || [], dls = p.deadlines || [], gaps = p.gaps || [];
+  const v = p.verification;
+  const day = iso => iso ? new Date(iso.length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+  // The exact words of the official page, shown only when the server found them on the cited page.
+  const quoteBox = item => item.verified && item.quote && srcBy[item.quote_source]
+    ? `<blockquote class="vq" lang="it"><q>${esc(item.quote)}</q><span class="by">Word for word from [${item.quote_source}] ${esc(host(srcBy[item.quote_source].url))}${srcBy[item.quote_source].retrieved_at ? ", retrieved " + esc(day(srcBy[item.quote_source].retrieved_at)) : ""}</span></blockquote>`
+    : (v ? `<div class="unq">Cited, but no exact sentence from the page was found: open the source to check.</div>` : "");
+  const qmark = item => item.verified && item.quote ? `<span class="qmark" title="${esc("“" + item.quote + "”")}">${icon("i-check")}quoted</span>` : "";
+  const freshness = s => !v ? "" : s.updated
+    ? `<span class="fresh${s.updated.stale ? " stale" : ""}">${s.updated.stale ? icon("i-alert") + "Over two years old: " : ""}page says “${esc(s.updated.text)}”</span>`
+    : `<span class="fresh">${s.page_read ? "Page read in full; it shows no update date" : "Search excerpt only"}${s.retrieved_at ? " · retrieved " + esc(day(s.retrieved_at)) : ""}</span>`;
+  const report = !v ? "" : `<div class="card vrep"><div class="card-h">${icon("i-shield")}Verification report</div><dl>
+      <dt>${v.quoted}/${v.claims}</dt><dd>steps, documents and deadlines backed by a sentence found word for word on the cited official page (${Math.round(100 * v.quote_coverage)}%)</dd>
+      <dt>${v.removed_uncited}</dt><dd>items removed because they cited no official source</dd>
+      <dt>${v.pages_read}/${v.pages_total}</dt><dd>official pages read in full with Tavily Extract${v.page_check !== "ok" ? " (full pages unavailable this time: excerpts only)" : ""}</dd>
+      <dt>${v.pages_dated}</dt><dd>pages that state when they were last updated${v.stale_sources.length ? `; <b style="color:var(--warn)">${v.stale_sources.map(n => "[" + n + "]").join(" ")} over two years old</b>` : ""}</dd>
+    </dl><p class="hint" style="margin-top:10px">Checked in code, not by the model, on ${esc(day(v.checked_at))}.</p></div>`;
 
   if (!steps.length) {
     out.innerHTML = `<div class="card plan-head"><div class="top-row">${exampleTag()}</div><h2>No plan yet for ${esc(taskLabel(req))} in ${esc(req.city)}</h2>
@@ -867,7 +900,7 @@ function renderPlan(p, req) {
 
   out.innerHTML = `
     <div class="card plan-head">
-      <div class="top-row"><span class="pill" style="background:var(--ok-soft);color:var(--ok)">${icon("i-shield", "ico")}All steps cited</span>${exampleTag()}</div>
+      <div class="top-row"><span class="pill" style="background:var(--ok-soft);color:var(--ok)">${icon("i-shield", "ico")}All steps cited</span>${v ? `<span class="pill" style="background:var(--surface-2);color:var(--ink-2)">${v.quoted} of ${v.claims} quoted word for word</span>` : ""}${exampleTag()}</div>
       <h2>${esc(taskLabel(req))} in ${esc(req.city)}</h2>
       ${p.summary ? `<p class="plan-summary">${esc(p.summary)}</p>` : ""}
       <div class="meta">
@@ -897,20 +930,22 @@ function renderPlan(p, req) {
                 ${s.cost ? `<span class="fact">${icon("i-euro")}${esc(s.cost)}</span>` : ""}
                 ${s.time ? `<span class="fact">${icon("i-clock")}${esc(s.time)}</span>` : ""}</div>` : ""}
               ${badges(s.sources)}
+              ${quoteBox(s)}
             </div>
           </li>`).join("")}
         </ol>
       </div>
       <aside>
         ${docs.length ? `<div class="card"><div class="card-h">${icon("i-doc")}Bring these<span class="count" id="doc-count"></span></div>
-          <ul class="checklist">${docs.map((d, i) => `<li><label><input type="checkbox" data-tick="d${i}" ${ticks["d" + i] ? "checked" : ""}><span class="txt">${esc(d.name)} ${(d.sources || []).filter(n => srcBy[n]).map(n => `<a class="mini-src" href="${esc(srcBy[n].url)}" target="_blank" rel="noopener" title="${esc(srcBy[n].title)} (${esc(host(srcBy[n].url))})">[${n}]</a>`).join(" ")}</span></label></li>`).join("")}</ul></div>` : ""}
+          <ul class="checklist">${docs.map((d, i) => `<li><label><input type="checkbox" data-tick="d${i}" ${ticks["d" + i] ? "checked" : ""}><span class="txt">${esc(d.name)} ${(d.sources || []).filter(n => srcBy[n]).map(n => `<a class="mini-src" href="${esc(srcBy[n].url)}" target="_blank" rel="noopener" title="${esc(srcBy[n].title)} (${esc(host(srcBy[n].url))})">[${n}]</a>`).join(" ")}${qmark(d)}</span></label></li>`).join("")}</ul></div>` : ""}
         ${dls.length ? `<div class="card"><div class="card-h">${icon("i-cal")}Deadlines</div>
-          ${dls.map((d, i) => `<div class="dl-item"><b>${esc(d.what)}</b><div class="rule">${esc(d.rule)}</div>${badges(d.sources)}
+          ${dls.map((d, i) => `<div class="dl-item"><b>${esc(d.what)}</b><div class="rule">${esc(d.rule)}</div>${badges(d.sources)}${quoteBox(d)}
             <div class="set-date"><label for="dl-${i}">Remind me on</label><input type="date" id="dl-${i}" data-dl="${i}" value="${esc((store.get(planKey(req) + ":dates", {}))[i] || "")}"></div></div>`).join("")}
           <p class="hint" style="margin-top:10px">These are rules, not dates. Pick the day that applies to you and download a calendar reminder.</p></div>` : ""}
         ${gaps.length ? `<div class="card gaps"><div class="card-h">${icon("i-alert")}Not covered by official sources</div><ul>${gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
         <div class="card"><div class="card-h">${icon("i-shield")}Sources</div>
-          <ol class="sources">${(p.sources || []).map(s => `<li id="src-${s.n}"><span class="sn">${s.n}</span><span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || host(s.url))} ${icon("i-link", "ico")}</a><span class="host">${esc(host(s.url))}</span></span></li>`).join("")}</ol></div>
+          <ol class="sources">${(p.sources || []).map(s => `<li id="src-${s.n}"><span class="sn">${s.n}</span><span><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || host(s.url))} ${icon("i-link", "ico")}</a><span class="host">${esc(host(s.url))}</span>${freshness(s)}</span></li>`).join("")}</ol></div>
+        ${report}
       </aside>
     </div>`;
   out.querySelectorAll(".sources .ico").forEach(i => { i.style.width = "13px"; i.style.height = "13px"; i.style.verticalAlign = "-1px"; });
@@ -949,11 +984,14 @@ function planText(p, req) {
     if (s.detail) lines.push(`   ${s.detail}`);
     const facts = [s.where && `Where: ${s.where}`, s.cost && `Cost: ${s.cost}`, s.time && `Time: ${s.time}`].filter(Boolean);
     if (facts.length) lines.push(`   ${facts.join(" · ")}`);
+    if (s.verified && s.quote) lines.push(`   Source says [${s.quote_source}]: "${s.quote}"`);
   });
   if ((p.documents || []).length) { lines.push("", "BRING THESE"); p.documents.forEach(d => lines.push(`- ${d.name} ${refs(d.sources)}`)); }
   if ((p.deadlines || []).length) { lines.push("", "DEADLINES"); p.deadlines.forEach(d => lines.push(`- ${d.what}: ${d.rule} ${refs(d.sources)}`)); }
   if ((p.gaps || []).length) { lines.push("", "NOT COVERED BY OFFICIAL SOURCES"); p.gaps.forEach(g => lines.push(`- ${g}`)); }
-  lines.push("", "SOURCES"); (p.sources || []).forEach(s => lines.push(`[${s.n}] ${s.title} - ${s.url}`));
+  lines.push("", "SOURCES"); (p.sources || []).forEach(s => lines.push(`[${s.n}] ${s.title} - ${s.url}`
+    + (s.retrieved_at ? ` (retrieved ${s.retrieved_at.slice(0, 10)})` : "") + (s.updated ? ` (page: "${s.updated.text}")` : "")));
+  if (p.verification) lines.push("", `Verification: ${p.verification.quoted} of ${p.verification.claims} items quoted word for word from the cited official page.`);
   lines.push("", "Made with Service Desk. Not legal advice: always confirm with the office.");
   return lines.join("\n");
 }

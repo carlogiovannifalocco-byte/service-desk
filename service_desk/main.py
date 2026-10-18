@@ -63,12 +63,13 @@ class PlanRequest(BaseModel):
     nationality: str = Field(min_length=2, max_length=60)
     situation: str = Field(default="", max_length=1000)
     question: str = Field(default="", max_length=300)  # used when task is "other"
+    lang: str = "en"  # "en" or "it"
 
 
 @app.post("/api/plan")
 def make_plan(req: PlanRequest):
     try:
-        return core.plan(req.task, req.city, req.nationality, req.situation, req.question)
+        return core.plan(req.task, req.city, req.nationality, req.situation, req.question, req.lang)
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     except ServiceError as exc:

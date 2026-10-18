@@ -69,18 +69,22 @@ _PLANS = {
         "steps": [
             {"title": "Fill in form AA4/8", "detail": "It is the request form for a codice fiscale. Print it and fill it "
              "in before the appointment to save time.", "where": "Online, then print", "cost": "Free", "time": "",
-             "sources": [1]},
+             "sources": [1], "quote": "with form AA4/8 and a valid identity document"},
             {"title": "Book an appointment", "detail": "Book a slot at the office closest to you, online, by phone or "
-             "in the app.", "where": "Agenzia delle Entrate website", "cost": "", "time": "", "sources": [2]},
+             "in the app.", "where": "Agenzia delle Entrate website", "cost": "", "time": "", "sources": [2],
+             "quote": "Appointments at the offices can be booked online, by phone or through the app."},
             {"title": "Go to the office with your documents", "detail": "Bring your passport and, as a non-EU "
              "citizen, your visa or residence permit. The officer prints a certificate with your codice fiscale.",
-             "where": "Any Agenzia delle Entrate office", "cost": "Free", "time": "Same day", "sources": [1]},
+             "where": "Any Agenzia delle Entrate office", "cost": "Free", "time": "Same day", "sources": [1],
+             "quote": "request the codice fiscale at any office of the Agenzia delle Entrate"},
             {"title": "Expect the tessera sanitaria later", "detail": "The plastic card that shows your codice fiscale "
              "arrives after you register with the national health service.", "where": "By post", "cost": "",
-             "time": "", "sources": [3]},
+             "time": "", "sources": [3], "quote": "is sent after registration with the SSN"},
         ],
-        "documents": [{"name": "Valid passport", "sources": [1]}, {"name": "Form AA4/8, filled in", "sources": [1]},
-                      {"name": "Visa or residence permit (non-EU citizens)", "sources": [1]}],
+        "documents": [{"name": "Valid passport", "sources": [1], "quote": "a valid identity document"},
+                      {"name": "Form AA4/8, filled in", "sources": [1], "quote": "with form AA4/8"},
+                      # Not stated in the excerpt: shown as cited but not quoted, as a live answer would be.
+                      {"name": "Visa or residence permit (non-EU citizens)", "sources": [1], "quote": ""}],
         "deadlines": [],
         "gaps": ["How long the wait for an appointment in Milano is today is not stated in the sources."],
     },
@@ -90,25 +94,31 @@ _PLANS = {
         "steps": [
             {"title": "Gather your documents", "detail": "Passport, residence permit or renewal receipt, codice fiscale, "
              "and your rental contract or the owner's consent.", "where": "", "cost": "", "time": "",
-             "sources": [2]},
+             "sources": [2], "quote": "Non-EU citizens attach their passport and residence permit (or the renewal receipt)."},
             {"title": "Submit the residency declaration", "detail": "Online on ANPR with SPID or CIE, or in person at "
              "the anagrafe of the Comune di Milano.", "where": "ANPR or Comune di Milano, Anagrafe", "cost": "Free",
-             "time": "Within 20 days of moving in", "sources": [1, 2]},
+             "time": "Within 20 days of moving in", "sources": [1, 2],
+             "quote": "The residency declaration can be submitted online with SPID or CIE, or at the comune's anagrafe."},
             {"title": "Be at home for the police check", "detail": "The municipal police visit to confirm that you "
              "live at the address. Put your name on the doorbell and the mailbox.", "where": "Your home",
-             "cost": "", "time": "Within 45 days", "sources": [2]},
+             "cost": "", "time": "Within 45 days", "sources": [2],
+             "quote": "The municipal police check that you live at the address."},
             {"title": "Registration confirmed", "detail": "If the comune does not reply within 45 days, your "
-             "registration counts as accepted.", "where": "", "cost": "", "time": "45 days", "sources": [2]},
+             "registration counts as accepted.", "where": "", "cost": "", "time": "45 days", "sources": [2],
+             "quote": "If the comune does not reply within 45 days, the registration is confirmed."},
             {"title": "Book your electronic ID card", "detail": "Once resident you can book the CIE at the comune.",
-             "where": "Comune di Milano", "cost": "About €22", "time": "", "sources": [3]},
+             "where": "Comune di Milano", "cost": "About €22", "time": "", "sources": [3],
+             "quote": "Once resident, book the CIE at your comune."},
         ],
-        "documents": [{"name": "Valid passport", "sources": [2]},
-                      {"name": "Residence permit, or the receipt of its renewal", "sources": [2]},
-                      {"name": "Rental contract or owner's consent declaration", "sources": [2]},
-                      {"name": "SPID or CIE, to apply online", "sources": [1]}],
-        "deadlines": [{"what": "Declare your residency", "rule": "Within 20 days of moving in", "sources": [2]},
+        "documents": [{"name": "Valid passport", "sources": [2], "quote": "attach their passport"},
+                      {"name": "Residence permit, or the receipt of its renewal", "sources": [2],
+                       "quote": "residence permit (or the renewal receipt)"},
+                      {"name": "Rental contract or owner's consent declaration", "sources": [2], "quote": ""},
+                      {"name": "SPID or CIE, to apply online", "sources": [1], "quote": "submitted online with SPID or CIE"}],
+        "deadlines": [{"what": "Declare your residency", "rule": "Within 20 days of moving in", "sources": [2],
+                       "quote": "Declare residency within 20 days of moving in."},
                       {"what": "Comune's checks completed", "rule": "45 days after you apply; silence means yes",
-                       "sources": [2]}],
+                       "sources": [2], "quote": "If the comune does not reply within 45 days"}],
         "gaps": ["The sources do not say how long the wait for an appointment at the Milano anagrafe is."],
     },
 }
@@ -166,7 +176,9 @@ def search(query: str, max_results: int = 6) -> list[dict]:
         found = _RES_SOURCES
     else:
         found = []  # no example for other tasks, so the "no official source" path is shown
-    return [s for s in found if clients.is_official(s["url"])][:max_results]
+    from .verify import now_iso
+
+    return [{**s, "retrieved_at": now_iso()} for s in found if clients.is_official(s["url"])][:max_results]
 
 
 def chat_json(system: str, user: str | list, max_tokens: int = 2000) -> dict:
@@ -183,6 +195,12 @@ def chat_json(system: str, user: str | list, max_tokens: int = 2000) -> dict:
             "urgency": "", "words_to_know": []}
 
 
+def extract(urls: list[str]) -> dict[str, str]:
+    """Demo mode reads no pages: quotes are checked against the canned excerpts only, and no page date is shown."""
+    return {}
+
+
 def install() -> None:
     clients.search = search
+    clients.extract = extract
     clients.chat_json = chat_json
