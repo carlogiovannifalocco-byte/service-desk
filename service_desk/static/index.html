@@ -50,6 +50,7 @@
   .nav a { color:var(--ink-2); text-decoration:none; padding:8px 12px; border-radius:9px; font-size:15px; font-weight:500; white-space:nowrap; }
   .nav a:hover { background:var(--surface-2); color:var(--ink); }
   .nav a[aria-current="page"] { background:var(--accent-soft); color:var(--accent); }
+  .nav .tab-ico, .nav .sm { display:none; }
   .nav .badge { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:9px; background:var(--accent); color:var(--accent-ink); font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
   .case-strip { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 22px; padding:14px 16px; border-radius:14px; background:var(--accent-soft); color:var(--ink); text-decoration:none; }
   .case-strip b { font-weight:650; } .case-strip .go { margin-left:auto; color:var(--accent); font-weight:600; }
@@ -370,8 +371,14 @@
     .top { position:static; }
     .top-in { gap:8px; padding:8px 12px; flex-wrap:wrap; }
     .brand { font-size:17px; }
-    .nav { margin-left:0; width:100%; overflow-x:auto; }
-    .nav a { padding:6px 10px; font-size:14px; }
+    /* Phones: the four sections become a bottom tab bar, within thumb reach and never cut off. */
+    .nav { position:fixed; left:0; right:0; bottom:0; z-index:20; margin:0; gap:0; display:grid; grid-template-columns:repeat(4, 1fr);
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--line); }
+    .nav a { position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; min-height:52px; font-size:12px; font-weight:600; border-radius:10px; }
+    .nav a .tab-ico { display:block; width:22px; height:22px; }
+    .nav a .lg { display:none; } .nav a .sm { display:inline; }
+    .nav .badge { position:absolute; top:2px; left:calc(50% + 6px); margin:0; }
+    body { padding-bottom:calc(72px + env(safe-area-inset-bottom)); }
     main { padding-top:20px; }
     .card, .form-card, .plan-head { padding:16px; }
     .field-row { grid-template-columns:1fr; }
@@ -437,10 +444,10 @@
   <div class="top-in">
     <a class="brand" href="#" aria-label="Service Desk, home"><span class="brand-mark"><svg class="ico"><use href="#i-check"/></svg></span>Service Desk</a>
     <nav class="nav" aria-label="Main">
-      <a href="#plan" data-nav="plan">Plan a task</a>
-      <a href="#letter" data-nav="letter">Explain a letter</a>
-      <a href="#case" data-nav="case">My case<span class="badge" id="case-badge" hidden></span></a>
-      <a href="#trust" data-nav="trust">Why trust it</a>
+      <a href="#plan" data-nav="plan"><svg class="ico tab-ico" aria-hidden="true"><use href="#i-list"/></svg><span class="lg">Plan a task</span><span class="sm">Plan</span></a>
+      <a href="#letter" data-nav="letter"><svg class="ico tab-ico" aria-hidden="true"><use href="#i-letter"/></svg><span class="lg">Explain a letter</span><span class="sm">Letter</span></a>
+      <a href="#case" data-nav="case"><svg class="ico tab-ico" aria-hidden="true"><use href="#i-cal"/></svg><span>My case</span><span class="badge" id="case-badge" hidden></span></a>
+      <a href="#trust" data-nav="trust"><svg class="ico tab-ico" aria-hidden="true"><use href="#i-shield"/></svg><span class="lg">Why trust it</span><span class="sm">Trust</span></a>
     </nav>
   </div>
 </header>
