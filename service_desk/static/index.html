@@ -50,6 +50,25 @@
   .nav a { color:var(--ink-2); text-decoration:none; padding:8px 12px; border-radius:9px; font-size:15px; font-weight:500; white-space:nowrap; }
   .nav a:hover { background:var(--surface-2); color:var(--ink); }
   .nav a[aria-current="page"] { background:var(--accent-soft); color:var(--accent); }
+  .nav .badge { display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px; margin-left:6px; border-radius:9px; background:var(--accent); color:var(--accent-ink); font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .case-strip { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 22px; padding:14px 16px; border-radius:14px; background:var(--accent-soft); color:var(--ink); text-decoration:none; }
+  .case-strip b { font-weight:650; } .case-strip .go { margin-left:auto; color:var(--accent); font-weight:600; }
+  .case-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:18px; align-items:start; }
+  @media (max-width:860px) { .case-grid { grid-template-columns:1fr; } }
+  .case-item { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:12px 0; border-top:1px solid var(--line); }
+  .case-item:first-of-type { border-top:0; }
+  .case-item .t { font-weight:600; } .case-item .sub { color:var(--muted); font-size:14px; grid-column:1; }
+  .case-item .btn { grid-row:1 / span 2; grid-column:2; align-self:center; }
+  .case-prog { grid-column:1; height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden; margin-top:4px; }
+  .case-prog div { height:100%; background:var(--accent); transform-origin:left; }
+  .tl { list-style:none; margin:0; padding:0; }
+  .tl li { display:grid; grid-template-columns:64px 1fr; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  .tl li:first-child { border-top:0; }
+  .tl .d { text-align:center; border-radius:10px; background:var(--surface-2); padding:6px 0; font-variant-numeric:tabular-nums; }
+  .tl .d b { display:block; font-size:20px; line-height:1.1; } .tl .d span { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .tl .w { font-weight:600; } .tl .w.past { color:var(--muted); } .tl .w.soon { color:#b4471f; }
+  .tl .from { color:var(--muted); font-size:13px; }
+  .case-empty { text-align:center; padding:28px 16px; color:var(--muted); }
 
   .banner { border-bottom:1px solid var(--line); }
   .banner-in { max-width:1120px; margin:auto; padding:10px 16px; display:flex; gap:10px; align-items:flex-start; font-size:14px; }
@@ -420,6 +439,7 @@
     <nav class="nav" aria-label="Main">
       <a href="#plan" data-nav="plan">Plan a task</a>
       <a href="#letter" data-nav="letter">Explain a letter</a>
+      <a href="#case" data-nav="case">My case<span class="badge" id="case-badge" hidden></span></a>
       <a href="#trust" data-nav="trust">Why trust it</a>
     </nav>
   </div>
@@ -429,6 +449,7 @@
 <main id="main">
   <!-- HOME -->
   <section class="view" id="view-home" tabindex="-1" aria-labelledby="home-h">
+    <a class="case-strip" id="case-strip" href="#case" hidden></a>
     <div class="hero">
       <div class="eyebrow">Italian bureaucracy, made legible</div>
       <h1 id="home-h">Know the next step. <em>Check the source.</em></h1>
@@ -465,7 +486,7 @@
     <div class="trust-strip">
       <div class="trust-item"><svg class="ico"><use href="#i-shield"/></svg><div><b>Official sources only</b><span>Search is restricted to gov.it, INPS, Agenzia delle Entrate and comune websites.</span></div></div>
       <div class="trust-item"><svg class="ico"><use href="#i-scissors"/></svg><div><b>No source, no step</b><span>Steps the model can't back with a source are removed, and you're told what is missing.</span></div></div>
-      <div class="trust-item"><svg class="ico"><use href="#i-lock"/></svg><div><b>Nothing is stored</b><span>Letters are read for one answer and dropped. <a href="#trust">How it works</a></span></div></div>
+      <div class="trust-item"><svg class="ico"><use href="#i-lock"/></svg><div><b>Nothing is stored on the server</b><span>Letters are read for one answer and dropped. Your case lives in your browser only. <a href="#trust">How it works</a></span></div></div>
     </div>
   </section>
 
@@ -596,6 +617,13 @@
   </section>
 
   <!-- TRUST -->
+  <section class="view" id="view-case" tabindex="-1" aria-labelledby="case-h" hidden>
+    <div class="eyebrow">My case</div>
+    <h1 class="page-h" id="case-h">Everything you are dealing with, in one place</h1>
+    <p class="lede">Every plan you made and every letter you had explained, with all their dates in one timeline. Saved only in this browser: nothing is kept on the server.</p>
+    <div id="case-out"></div>
+  </section>
+
   <section class="view" id="view-trust" tabindex="-1" aria-labelledby="trust-h" hidden>
     <div class="eyebrow">Why trust it</div>
     <h1 class="page-h" id="trust-h">Every step links to an official source</h1>
@@ -702,7 +730,7 @@ function errorCard(e, what, retryId) {
 }
 
 /* ---------- Routing ---------- */
-const VIEWS = ["home", "plan", "letter", "trust"];
+const VIEWS = ["home", "plan", "letter", "case", "trust"];
 function route(focus = true) {
   const name = location.hash.replace(/^#\/?/, "");
   const view = VIEWS.includes(name) ? name : "home";
@@ -710,7 +738,8 @@ function route(focus = true) {
   document.querySelectorAll("[data-nav]").forEach(a => {
     if (a.dataset.nav === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
-  document.title = { home: "Service Desk", plan: "Plan a task · Service Desk", letter: "Explain a letter · Service Desk", trust: "Why trust it · Service Desk" }[view];
+  document.title = { home: "Service Desk", plan: "Plan a task · Service Desk", letter: "Explain a letter · Service Desk", case: "My case · Service Desk", trust: "Why trust it · Service Desk" }[view];
+  if (view === "case") renderCase();
   if (focus) { window.scrollTo(0, 0); $("view-" + view).focus({ preventScroll: true }); }
 }
 window.addEventListener("hashchange", () => route(true));
@@ -857,6 +886,7 @@ async function runPlan(req) {
     const p = await call("/api/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
     state.plan = p;
     store.set("lastPlan", { req, plan: p });
+    caseSavePlan(req, p);
     renderPlan(p, req);
     out.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   } catch (e) {
@@ -1076,6 +1106,7 @@ async function runLetter(req) {
   fd.append("lang", req.lang);
   try {
     const l = await call("/api/letter", { method: "POST", body: fd });
+    caseSaveLetter(l);
     renderLetter(l);
   } catch (e) {
     out.innerHTML = errorCard(e, "read this letter", "letter-retry");
@@ -1131,11 +1162,108 @@ function renderLetter(l) {
   if ($("ics-letter")) $("ics-letter").onclick = () => downloadIcs(dls.map(d => ({ what: d.what, date: d.date })));
 }
 
+/* ---------- My case: the plans and letters of one person, kept in this browser ---------- */
+const caseGet = () => store.get("case", { plans: [], letters: [] });
+function caseSavePlan(req, plan) {
+  const c = caseGet();
+  const key = planKey(req);
+  c.plans = c.plans.filter(x => x.key !== key);
+  c.plans.unshift({ key, req, plan, savedAt: new Date().toISOString() });
+  store.set("case", c); caseBadge();
+}
+function caseSaveLetter(l) {
+  const c = caseGet();
+  const sig = [l.sender, l.kind, l.summary].join("|");
+  c.letters = c.letters.filter(x => [x.letter.sender, x.letter.kind, x.letter.summary].join("|") !== sig);
+  c.letters.unshift({ id: Date.now().toString(36), letter: l, savedAt: new Date().toISOString() });
+  store.set("case", c); caseBadge();
+}
+// Every dated item: deadlines written in letters, and the reminder dates you picked for plan deadlines.
+function caseEvents(c) {
+  const ev = [];
+  c.letters.forEach(x => (x.letter.deadlines || []).forEach(d => ev.push({ date: d.date, what: d.what, from: x.letter.kind || x.letter.sender || "Letter", href: "letter:" + x.id })));
+  c.plans.forEach(x => {
+    const dates = store.get(x.key + ":dates", {});
+    (x.plan.deadlines || []).forEach((d, i) => { if (dates[i]) ev.push({ date: dates[i], what: d.what, from: taskLabel(x.req), href: "plan:" + x.key, reminder: true }); });
+  });
+  return ev.sort((a, b) => a.date.localeCompare(b.date));
+}
+function caseBadge() {
+  const c = caseGet();
+  const upcoming = caseEvents(c).filter(e => daysUntil(e.date) >= 0);
+  const n = upcoming.length;
+  $("case-badge").hidden = !n; $("case-badge").textContent = n;
+  const strip = $("case-strip");
+  if (!c.plans.length && !c.letters.length) { strip.hidden = true; return; }
+  const next = upcoming[0];
+  strip.hidden = false;
+  strip.innerHTML = `${icon("i-cal")}<span><b>Your case:</b> ${c.plans.length} plan${c.plans.length === 1 ? "" : "s"}, ${c.letters.length} letter${c.letters.length === 1 ? "" : "s"}${next ? ` · next: ${esc(next.what)}, ${esc(whenText(daysUntil(next.date))[0].toLowerCase())}` : ""}</span><span class="go">Open ${icon("i-arrow")}</span>`;
+}
+function renderCase() {
+  const c = caseGet();
+  const out = $("case-out");
+  if (!c.plans.length && !c.letters.length) {
+    out.innerHTML = `<div class="card case-empty"><p>Nothing here yet. Make a plan or explain a letter and it will be kept here, with its dates.</p>
+      <a class="btn primary" href="#plan">Plan a task ${icon("i-arrow")}</a></div>`;
+    return;
+  }
+  const ev = caseEvents(c);
+  const mon = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
+  const row = e => { const n = daysUntil(e.date); const [w] = whenText(n); const [y, m, d] = e.date.split("-");
+    return `<li><div class="d" aria-hidden="true"><b>${+d}</b><span>${esc(mon.format(new Date(Date.UTC(+y, m - 1, +d))))}</span></div>
+      <div><div class="w ${n < 0 ? "past" : n <= 7 ? "soon" : ""}">${esc(w)}${e.reminder ? " · your reminder" : ""}</div><div>${esc(e.what)}</div>
+      <div class="from"><a href="#" data-open="${esc(e.href)}">${esc(e.from)}</a></div></div></li>`; };
+  const upcoming = ev.filter(e => daysUntil(e.date) >= 0), past = ev.filter(e => daysUntil(e.date) < 0);
+  const plans = c.plans.map(x => { const ticks = store.get(x.key, {}); const steps = (x.plan.steps || []).length;
+    const done = (x.plan.steps || []).filter((_, i) => ticks["s" + i]).length;
+    return `<div class="case-item"><span class="t">${esc(taskLabel(x.req))}</span>
+      <button class="btn small" type="button" data-open="plan:${esc(x.key)}">Open</button>
+      <span class="sub">${esc(x.req.city)} · ${done} of ${steps} steps done</span>
+      <div class="case-prog" aria-hidden="true"><div style="transform:scaleX(${steps ? done / steps : 0})"></div></div></div>`; }).join("");
+  const letters = c.letters.map(x => { const l = x.letter; const dl = (l.deadlines || []).length;
+    return `<div class="case-item"><span class="t">${esc(l.kind || "Letter")}</span>
+      <button class="btn small" type="button" data-open="letter:${esc(x.id)}">Open</button>
+      <span class="sub">${l.sender ? esc(l.sender) + " · " : ""}${dl} deadline${dl === 1 ? "" : "s"} · ${{ high: "high urgency", medium: "medium urgency", low: "low urgency" }[l.urgency] || "urgency unclear"}</span></div>`; }).join("");
+  out.innerHTML = `<div class="case-grid">
+    <div class="card"><div class="card-h">${icon("i-cal")}Coming up<span class="count">${upcoming.length} date${upcoming.length === 1 ? "" : "s"}</span></div>
+      ${upcoming.length ? `<ol class="tl">${upcoming.map(row).join("")}</ol>` : `<p class="hint">No upcoming dates. Letter deadlines appear here automatically; for plans, pick a reminder date next to each deadline.</p>`}
+      ${past.length ? `<details style="margin-top:10px"><summary>${past.length} past date${past.length === 1 ? "" : "s"}</summary><ol class="tl">${past.map(row).join("")}</ol></details>` : ""}
+      ${upcoming.length ? `<div class="actions"><button class="btn small primary" type="button" id="case-ics">${icon("i-download")}Add all ${upcoming.length} to my calendar</button></div>` : ""}</div>
+    <div>
+      ${plans ? `<div class="card"><div class="card-h">${icon("i-list")}Plans</div>${plans}</div>` : ""}
+      ${letters ? `<div class="card"><div class="card-h">${icon("i-letter")}Letters</div>${letters}</div>` : ""}
+      <div class="card"><div class="card-h">${icon("i-lock")}Your data</div><p class="hint">All of this lives in this browser's storage. Deleting removes it from this device for good.</p>
+        <div class="actions"><button class="btn small" type="button" id="case-wipe">${icon("i-x")}Delete my case</button></div></div>
+    </div></div>`;
+  if ($("case-ics")) $("case-ics").onclick = () => downloadIcs(upcoming.map(e => ({ what: `${e.what} (${e.from})`, date: e.date })));
+  $("case-wipe").onclick = () => {
+    if (!confirm("Delete every saved plan, letter, tick and reminder from this browser?")) return;
+    try { Object.keys(localStorage).filter(k => k.startsWith("sd:")).forEach(k => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+    caseBadge(); renderCase(); toast("Your case was deleted from this browser");
+  };
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-open]");
+  if (!a) return;
+  e.preventDefault();
+  const [kind, ...rest] = a.dataset.open.split(":"); const id = rest.join(":");
+  const c = caseGet();
+  if (kind === "plan") {
+    const x = c.plans.find(p => p.key === id); if (!x) return;
+    state.plan = x.plan; state.planReq = x.req; location.hash = "#plan"; collapseForm(x.req); renderPlan(x.plan, x.req);
+  } else {
+    const x = c.letters.find(l => l.id === id); if (!x) return;
+    location.hash = "#letter"; renderLetter(x.letter);
+  }
+});
+
 /* ---------- Start ---------- */
 route(false);
 loadConfig().then(() => {
   const last = store.get("lastPlan", null);
   if (last && last.plan && last.req) { state.planReq = last.req; collapseForm(last.req); renderPlan(last.plan, last.req); }
+  caseBadge();
+  if (location.hash === "#case") renderCase();
 });
 </script>
 </body>
